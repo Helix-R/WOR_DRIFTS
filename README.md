@@ -1,6 +1,5 @@
 [READ_ME.txt](https://github.com/user-attachments/files/30681255/READ_ME.txt)
 Author: Helix Robles
-Contact: Helix.Roblez@gmail.com
 Date: 7/28/2026
 
 This folder contains 4 R markdown files and 6 R data files for the manuscript (Robles et al., 2026):
