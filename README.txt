@@ -1,4 +1,3 @@
-[READ_ME.txt](https://github.com/user-attachments/files/30681255/READ_ME.txt)
 Author: Helix Robles
 Date: 7/28/2026
 
