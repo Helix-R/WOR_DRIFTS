@@ -1,0 +1,693 @@
+---
+title: "Subtracted POM MAOM Spectra and Indices"
+author: "Helix-R"
+date: "2024-10-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Space for time 2023 - ChemoSpecR for DRIFTS subtraction spectra
+
+This space for time substitution experiment was conducted in four experimental almond orchards that have whole orchard recycling (WOR) and control treatments. These 4 fields were each sampled in 4 replicate blocks per treatment in Summer 2023 at the University of California Kearney Agricultural Research and Extension Center (UC KARE) located in Fresno County, CA. The soils were first seived to <2 mm and then separated into POM and MAOM fractions. All POM and MAOM samples were air-dried, diluted to 10% (w/w) with pre-ground potassium bromide (KBr), and then analyzed by DRIFTS spectroscopy. Spectral subtractions were performed in OMNIC, to remove the absorbance of inorganic covalent bonds such as Si-O (which compose the mineral contribution of soil).
+
+Space for Time Substitution Design (Fields + Years):
+Field K32 (est. 2008) 15 yrs  |   33 tons wood chips/acre   | Blocks 2,3,4,6
+Field K74 (est. 2017)  6 yrs  |   85 tons wood chips/acre   | Blocks 11,12,13,14
+Field K92 (est. 2019)  4 yrs  |   61 tons wood chips/acre   | Blocks 1,2,3,5
+Field K95 (est. 2020)  3 yrs  |   60 tons wood chips/acre   | Blocks 1,2,3,4
+
+POM and MAOM Sample (#) shorthand key:
+   [K92]         [K31]        [K74]          [K95]
+1. B1 - CN    9.  B2 - CN   17. B11 - CN    25. B1 - CN
+2. B2 - CN    10. B3 - CN   18. B12 - CN    26. B2 - CN
+3. B3 - CN    11. B4 - CN   19. B13 - CN    27. B3 - CN
+4. B5 - CN    12. B6 - CN   20. B14 - CN    28. B4 - CN
+5. B1 - WC    13. B2 - WC   21. B11 - WC    29. B1 - WC
+6. B2 - WC    14. B3 - WC   22. B12 - WC    30. B2 - WC
+7. B3 - WC    15. B4 - WC   23. B13 - WC    31. B3 - WC
+8. B5 - WC    16. B6 - WC   24. B14 - WC    32. B4 - WC 
+Note: CN = Control, WC = Wood Chip treatments
+
+# Load Libraries
+```{r, echo=FALSE}
+library(ChemoSpec) # This creates matrix objects from spectra csv files
+library(baseline) # This performs baseline correction
+library(viridis) # Used in selection of peaks
+library(RColorBrewer)
+library(stringr)
+library(R.utils)
+library(ggplot2) 
+library(dplyr)
+library(tidyr)
+library(amap)
+```
+The R package (ChemoSpec) was discovered at: https://cran.r-project.org/web/packages/ChemoSpec/vignettes/ChemoSpec.pdf
+ChemoSpec was designed to take the raw (.csv) spectral data, inspect + remove bad samples, correct the baseline, remove noise, normalize the data, and then perform analysis by PCA.
+
+
+## The chunk below is commented out because it collates the individual sample spectra files into an rds object.
+The collated rds spectra object is provided, and can be read in using the proceeding chunk
+
+
+# Get the data into ChemoSpec
+One is the function files2SpectraObject, which assumes that your raw data exist as separate files in a single directory, each file containing a frequency column and an intensity column. A header row may or may not be present, and the data can be separated by any separation mark you like (typically comma, tab, semi-colon or space).
+files2SpectraObject acts on all files in the current working directory with the specified fileExt so there should be no extra files of that type hanging around
+
+The second function is matrix2SpectraObject, which assumes you have a single file containing a matrix of the data. This matrix should have frequencies in the first column, and individual sample intensities in the remaining columns. There must be a header row in the file, and it must contain the sample names (except the first entry, which marks the frequencies, is ignored).
+```{r, echo=FALSE}
+# List all CSV files in the working directory
+#file_list <- list.files(pattern = "\\.(csv|CSV)$", full.names = TRUE)
+
+# Initialize a list to store dimensions
+#file_dimensions <- list()
+
+# Loop through each file and get its dimensions
+#for (file in file_list) {
+#  data <- read.csv(file, header = FALSE)  # Set header = TRUE if your files have headers
+#  file_dimensions[[file]] <- dim(data)    # Store the dimensions as rows and columns
+#}
+
+# Display the dimensions for each file
+#file_dimensions # Needs to be the same for all
+
+# Make a Spectra file
+# The function below requires that the working directory of this markdown only contains the .csv spectra to be combined
+#SFT_POM_MAOM <- files2SpectraObject(
+#  gr.crit = c("POM", "MAM"), # Groups the data by name
+#  gr.cols = c("red", "#1F77B4"),
+#  freq.unit = "wavenumber cm-1",
+#  int.unit = "peak intensity",
+#  descrip = "WOR POM MAOM subtracted spectra",
+#  fileExt = "\\.(csv|CSV)$",
+#  sep = ",",                # Specify comma as the separator
+#  header = FALSE,            # Specify that the CSV files have headers
+#  dec = ".",                # Decimal separator (change if needed)
+#  out.file = "POM_MAOM_subt",
+#  debug = TRUE) # Error "number of items to replace is not a multiple of replacement length" means that some csv files have a different number of rows. For this data most files have 1868 rows, but 10_POM, 11_POM, 12_POM, 13_MAM, 13_POM, 14_POM, 15_POM, 16_POM, 18_POM, 20_MAM, 21_MAM, 22_MAM, 23_MAM, 24_MAM, 25_POM, 26_MAM, 26_POM, 27_POM, 28_POM, 29_POM, 3_MAM, 30_POM, 31_POM, 32_POM, 9_POM  have 1869 rows and last row # 1869 should be removed (Note: this row corresponds to 4001.568 cm-1 and always has an absorbance of zero. That is why it is removed below).
+
+# Note on the error: OMNIC saves the numeric values of csv files in scientific notation, and information was being lost when the file was opened, saved, and closed. To avoid this, Ctrl + A > Format Cells > Number tab > double-click Category: General
+
+#sumSpectra(SFT_POM_MAOM) # Summary shows 32 POM and 32 MAOM subtractions that were performed in OMNIC
+
+# Note, this function reads in the wavenumbers backwards (low to high), whereas the data was collected from high to low wavenumber. This needs to be reversed in order for the baseline correction to be performed properly
+
+# Reverse the order of wavenumbers and associated spectra
+#SFT_POM_MAOM$freq <- rev(SFT_POM_MAOM$freq)  # Reverse wavenumbers
+#SFT_POM_MAOM$data <- SFT_POM_MAOM$data[, rev(seq_len(ncol(SFT_POM_MAOM$data)))]  # Reverse the spectra to match
+
+# Save the SFT_POM_MAOM object
+#saveRDS(SFT_POM_MAOM, file = "SFT_POM_MAOM_sub_KM.rds")
+# Now this whole chunk can be skipped, by loading and starting in the next chunk
+# For organization, these .csv files of the spectra were moved into a folder called "spectra"
+```
+
+# Plotting the Spectra
+reviewAllSpectra takes the pain out of inspecting quite a few spectra (previously this was called loopThruSpectra). In base graphics mode, it shows you one spectrum at a time, and waits for a return to be typed in the console before proceeding. In ggplot2 graphics mode, all the spectra are shown at once in a web page.
+
+plotSpectra is intended for general use and publication-quality graphics. You will generally have to play with the arguments a bit if plotting more than one spectrum.
+
+plotSpectraJS is the interactive version of plotSpectra. It shows your data in a web page with the ability to offset the spectra and zoom as desired. For really large data sets it may be slow; see the help page for ways to avoid that.
+
+Suppose that you wanted to focus just on the carbonyl region of these spectra; you can add the argument coord_cartesian(xlim = ...).
+```{r}
+# Load the SFT_POM_MAOM subtraction spectra object
+SFT_POM_MAOM <- readRDS("SFT_POM_MAOM_sub_KM.rds")
+# Make title and plot a couple samples
+mytitle <- expression(bold(WOR~POM~and~MAOM)~bold(Oxidized~and~Untreated~IR~Spectra))
+p <- plotSpectra(SFT_POM_MAOM, which = c(1, 2), yrange = c(-0.5, 0.5), # Just showing one sample
+offset = 0, lab.pos = 2200) # Offset is set to zero, because the spectra will along off the y-axis
+p <- p + ggtitle(mytitle)
+p # when using ggplot2, you have to "call" the object containing the plot
+
+# We can also focus on a specific region using xlim
+p <- p + ggtitle(mytitle) + coord_cartesian(xlim = c(1200, 3700)) # carbonyl focus would be 1650, 1800
+p
+```
+
+# Plotting the subtracted spectra with ggplot
+```{r}
+## Extract metadata, create a spectra data frame, merge the dataframes, and plot
+# Extract sample names from spectra object
+sample_names <- SFT_POM_MAOM[["names"]]
+
+# Create a metadata data frame by parsing the sample names
+metadata <- data.frame(
+  Sample_Name = sample_names,
+  Sample_Number = as.numeric(str_extract(sample_names, "^\\d+")),
+  Sample_Type = str_extract(sample_names, "(POM|MAM)"),
+  stringsAsFactors = FALSE
+)
+
+# Assign Field_Location based on Sample_Number
+metadata <- metadata %>%
+  mutate(
+    Field_Location = case_when(
+      Sample_Number >= 1 & Sample_Number <= 8  ~ "KB92",
+      Sample_Number >= 9 & Sample_Number <= 16 ~ "KB31",
+      Sample_Number >= 17 & Sample_Number <= 24 ~ "KB74",
+      Sample_Number >= 25 & Sample_Number <= 32 ~ "KB95",
+      TRUE ~ NA_character_
+    ),
+    Treatment = ifelse((Sample_Number - 1) %% 8 < 4, "CN", "WC"),
+    SOM_Fraction = ifelse(Sample_Type %in% c("POM", "PX"), "POM", "MAOM")
+  )
+
+# Create `spectra_df` with the wavenumber columns
+wavenumbers <- SFT_POM_MAOM$freq
+spectra_matrix <- SFT_POM_MAOM$data
+sample_ids <- SFT_POM_MAOM$names
+
+# Combine the wavenumber and spectral data into a data frame
+spectra_df <- as.data.frame(spectra_matrix)
+colnames(spectra_df) <- wavenumbers  # Set wavenumbers as column names
+spectra_df <- cbind(Sample_ID = sample_ids, spectra_df)  # Add Sample_ID column
+
+# Convert to long format for ggplot2
+spectra_df_long <- spectra_df %>%
+  pivot_longer(cols = -Sample_ID, names_to = "Wavenumber", values_to = "Intensity") %>%
+  mutate(Wavenumber = as.numeric(Wavenumber))  # Ensure wavenumber is numeric
+
+# Join with metadata
+spectra_df_long <- left_join(spectra_df_long, metadata, by = c("Sample_ID" = "Sample_Name"))
+
+# Plot only the untreated samples, color by treatment
+sub_trt_plot <- ggplot(spectra_df_long, aes(x = Wavenumber, y = Intensity, color = Treatment, group = Sample_ID)) +
+  geom_line(alpha = 1, linewidth = 0.2) +  # Add alpha and size to make lines more distinct, no shading
+  facet_wrap(~ Field_Location, scales = "free_y") +  # Facet by field
+  scale_x_reverse() +  # Invert the x-axis
+  scale_color_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E")) +
+  labs(
+    title = "POM & MAOM DRIFT Spectral Subtractions",
+    x = "Wavenumber (cm⁻¹)",
+    y = "Absorbance",
+    color = "Treatment"
+  ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.title = element_text(size = 12, face = "bold"),
+      legend.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+print(sub_trt_plot)
+
+# To save
+png("Sub_Spectra_Treatment_Facet_Field_KM.png", width=15, height=10, bg="white", res=600, units="in")
+print(sub_trt_plot)
+dev.off()
+
+# Plot only the untreated samples, color by SOM fraction
+sub_som_plot <- ggplot(spectra_df_long, aes(x = Wavenumber, y = Intensity, color = SOM_Fraction, group = Sample_ID)) +
+  geom_line(alpha = 1, linewidth = 0.2) +  # Add alpha and size to make lines more distinct, no shading
+  facet_wrap(~ Field_Location, scales = "free_y") +  # Facet by field
+  scale_x_reverse() +  # Invert the x-axis
+  labs(
+    title = "WOR & Control DRIFT Spectral Subtractions",
+    x = "Wavenumber (cm⁻¹)",
+    y = "Absorbance",
+    color = "SOM Fraction"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(size = 12, face = "bold"),
+    legend.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Print the plot
+print(sub_som_plot)
+
+# Save the plot as a PNG file
+png("Sub_Spectra_Fraction_Facet_Field_KM.png", width=15, height=10, bg="white", res=600, units="in")
+print(sub_som_plot)
+dev.off()
+```
+
+# Plotting again, but subset 1200 - 3700 cm-1 region
+```{r}
+# Filter spectra_df_long to keep only the desired wavenumber range (1200–3700 cm⁻¹)
+# and remove outliers based on intensity threshold
+spectra_df_long_filtered <- spectra_df_long %>%
+  dplyr::filter(
+    Wavenumber >= 1200 & Wavenumber <= 3700  # Subset wavenumber range
+  )
+
+# Separate the data into POM and MAOM dataframes
+pom_df <- spectra_df_long_filtered %>% dplyr::filter(SOM_Fraction == "POM")
+maom_df <- spectra_df_long_filtered %>% dplyr::filter(SOM_Fraction == "MAOM")
+
+# Create a plot for POM spectra
+pom_plot <- ggplot(pom_df, aes(x = Wavenumber, y = Intensity, color = Treatment, group = Sample_ID)) +
+  geom_line(alpha = 1, linewidth = 0.2) +  # Add alpha and size to make lines more distinct
+  facet_wrap(~ Field_Location, scales = "fixed") +  # Facet by field with fixed y-axis
+  scale_x_reverse(breaks = seq(1200, 3700, by = 500)) +  # Add more breaks for x-axis
+  scale_color_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E")) +
+  ylim(-0.003, 0.02) +  # Set y-axis limits
+  labs(
+    title = "POM DRIFT Spectral Subtractions (1200–3700 cm⁻¹)",
+    x = "Wavenumber (cm⁻¹)",
+    y = "Absorbance",
+    color = "Treatment"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10),  # Adjust x-axis label size
+    legend.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+print(pom_plot)
+
+# Save the POM plot
+png("POM_Facet_Field_KM_1200to3700.png", width = 10, height = 8, bg = "white", res = 600, units = "in")
+print(pom_plot)
+dev.off()
+
+# Create a plot for MAOM spectra
+maom_plot <- ggplot(maom_df, aes(x = Wavenumber, y = Intensity, color = Treatment, group = Sample_ID)) +
+  geom_line(alpha = 1, linewidth = 0.2) +  # Add alpha and size to make lines more distinct
+  facet_wrap(~ Field_Location, scales = "fixed") +  # Facet by field with fixed y-axis
+  scale_x_reverse(breaks = seq(1200, 3700, by = 500)) +  # Add more breaks for x-axis
+  scale_color_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E")) +
+  ylim(-0.003, 0.025) +  # Set y-axis limits
+  labs(
+    title = "MAOM DRIFT Spectral Subtractions (1200–3700 cm⁻¹)",
+    x = "Wavenumber (cm⁻¹)",
+    y = "Absorbance",
+    color = "Treatment"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10),  # Adjust x-axis label size
+    legend.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+print(maom_plot)
+
+# Save the MAOM plot
+png("MAOM_Facet_Field_KM_1200to3700.png", width = 10, height = 8, bg = "white", res = 600, units = "in")
+print(maom_plot)
+dev.off()
+```
+
+# Peak identification and resources
+
+Margenot et al 2023 - https://doi.org/10.1002%2Fsaj2.20583
+
+Singh et al 2016 (supplemental table) - 
+https://acsess.onlinelibrary.wiley.com/action/downloadSupplement?doi=10.2136%2Fsssaj2015.11.0414&file=saj2sssaj2015110414-sup-0001.pdf
+
+Spectral assignments
+3300 - 3400 OH and NH stretching ~ typical of cellulose, found in high OM soils, OH stretching in alcohols, carboxylic acids and phenols
+2850 - 2950 Aliphatic C-H symmetric and asymmetric stretching
+1730 - 1700 Esters and carboxylic acid
+1650	      Aromatic C=C stretching vibration, Proteins
+1635 - 1620 Aromatics and carboxyl C (1630)
+1600 - 1621 Phenolic compounds and aromatic C=C (1610) or COO- stretching (1620)
+1574 - 1575 Amide N-H bending vibration and amide stretching vibration C-N (amide II)
+1525 - 1530 Aromatic stretching C=C
+1500 - 1510 Aromatic C-H and C=C
+1470	      Aliphatic bending vibration (C-H)
+1400 - 1450 Aliphatics; CH2 (1400); aliphatic bending (1405); combination band due to bending and deformation and C-O (1432 - 1434); CH3 (1450)
+1380 - 1390 Aliphatic bending vibration (C-H),potential contributions from carboxylate symmetric stretching vibration (C-O)
+1360 	      CH2, CH3, and COO, COOH aliphatic bending
+1348	      Aliphatics and phenolics
+1320	      Hydroxyl C-O-H
+1270	      Phenol C-O asymmetric stretching vibration, carboxylic acid stretching vibration (C-O)
+1250	      Carboxylic COOH
+1238	      Aromatic C-H in plane deformation
+1000 - 1160 Polysaccharides, polysaccharide symmetric stretching vibration C-O (1080-1110)); carbohydrate C-OH stretching (1000-1030*)
+
+```{r}
+# Define peak wavenumbers observed
+selected_peaks <- c(3300, 2931, 2871, 1724, 1660, 1600, 1575, 1540, 1510, 1470, 1405, 1360, 1320, 1275)
+
+peak_labels <- c(
+  "3300" = "3300 ν(OH, NH) stretch",
+  "2931" = "2931 ν(C–H) asym. stretch (aliphatic CH2/CH3)",
+  "2871" = "2871 ν(C–H) sym. stretch (aliphatic CH2/CH3)",
+  "1724" = "1724 ν(C=O) stretch (carboxylic acids, esters)",
+  "1660" = "1660 v(C=C) aromatic C=C stretching vibration",
+  "1600" = "1600 v(C=C) phenolic and aromatic stretch",
+  "1575" = "1575 ν(C-N, NH) stretch (peptides and amide)",
+  "1540" = "1540 v(C=C) aromatic C=C stretch",
+  "1510" = "1510 v(C-H) aromatic C-H and C=C",
+  "1470" = "1470 δ(C-H) aliphatic bending",
+  "1405" = "1405 δ(C-H) aliphatic bending",
+  "1360" = "1360 δ(C-H) aliphatic bending",
+  "1320" = "1320 v(O-H) C-O-H Hydroxyl",
+  "1275" = "1275 ν(C=O) carboxylic acid COOH"
+)
+```
+
+## Spectral Index Values
+# Index 1 (Aliphatic : Aromatic) 2 (Aromatic : Carboxylic) and 3 (Aliphatic : Carboxylic)
+In accordance with the wavenumber corresponding to the 13 organic bands described in Margenot et al 2015: https://acsess.onlinelibrary.wiley.com/doi/10.2136/sssaj2015.02.0070
+
+# Margenot 2015 Indicies
+
+Index 1 = (1650 + 920 + 840) / (2924 + 2850 + 1470 + 1405)
+
+Index 2 = (2924 + 2850 + 1650 + 1470 + 1405 + 920 + 840) / (3400 + 1270 + 1110 + 1080)
+
+# Helix 2026 Indices, Revised for Wood (aromatic hydrocarbon) Amendment
+
+Index 1 = (2931 + 2871) / (1660 + 1600 + 1540 + 1510)
+
+Index 2 = (1660 + 1600 + 1540 + 1510) / (1724 + 1320 + 1275)
+
+Index 3 = (2931 + 2871) / (1724 + 1320 + 1275)
+
+# First try Margenot et al., 2015 Indices, revised by SNT Santiago 2024
+```{r}
+# Note - the peak labels used here are as follows:
+#peak_labels <- c(
+#  "3300" = "3300 ν(OH, NH) stretch",
+#  "2931" = "2931 ν(C–H) asym. stretch (aliphatic CH2/CH3)",
+#  "2871" = "2871 ν(C–H) sym. stretch (aliphatic CH2/CH3)",
+#  "1724" = "1724 ν(C=O) stretch (carboxylic acids, esters)",
+#  "1660" = "1660 v(C=C) aromatic C=C stretching vibration",
+#  "1601" = "1600 v(C=C) phenolic and aromatic stretch",
+#  "1576" = "1575 ν(C-N, NH) stretch (peptides and amide)",
+#  "1540" = "1540 v(C=C) aromatic C=C stretch",
+#  "1510" = "1510 v(C-H) aromatic C-H and C=C",
+#  "1469" = "1470 δ(C-H) aliphatic bending",
+#  "1406" = "1405 δ(C-H) aliphatic bending",
+#  "1320" = "1320 v(O-H) C-O-H Hydroxyl",
+#  "1275" = "1275 ν(C=O) carboxylic acid COOH",
+#  "1238" = "1238 v(C-H) aromatic plane deformation"
+#)
+
+# Define the wavenumbers for Index I and II (wavenumbers from Margenot et al., 2015)
+#index1_numerator_wavenumbers <- c(1650, 920, 840)
+#index1_denominator_wavenumbers <- c(2924, 2850, 1470, 1405)
+#index2_numerator_wavenumbers <- c(2924, 2850, 1650, 1470, 1405, 920, 840)
+#index2_denominator_wavenumbers <- c(3400, 1270, 1110, 1080)
+
+# Define Revised wavenumbers (Suzette's Index)
+# Reference Dissertation, by SUZETTE NICOLE TURNER SANTIAGO
+# Deepening Our Understanding of Nitrogen Mineralization in the Soils of California’s Central Valley via Field Trials and Mid-Infrared Spectroscopy
+index1_numerator_wavenumbers <- c(1650, 1238)
+index1_denominator_wavenumbers <- c(2924, 2850, 1470, 1405)
+index2_numerator_wavenumbers <- c(2924, 2850, 1650, 1470, 1405)
+index2_denominator_wavenumbers <- c(3400, 1270, 1110, 1080)
+
+# Combine all unique wavenumbers into one vector
+index_wavenumbers <- unique(c(
+  index1_numerator_wavenumbers,
+  index1_denominator_wavenumbers,
+  index2_numerator_wavenumbers,
+  index2_denominator_wavenumbers
+))
+
+# Summarize the intensity values for Index I and II
+# Find closest matches to the desired wavenumbers within a small tolerance (e.g., 1 cm⁻¹)
+tolerance <- 2  # Adjust tolerance as needed
+filtered_spectra <- spectra_df_long %>%
+  rowwise() %>%
+  mutate(Closest_Wavenumber = index_wavenumbers[which.min(abs(Wavenumber - index_wavenumbers))]) %>%
+  filter(abs(Wavenumber - Closest_Wavenumber) <= tolerance) %>%
+  ungroup()
+
+# Replace negative intensity values with 0
+filtered_spectra <- filtered_spectra %>%
+  mutate(Intensity = ifelse(Intensity < 0, 0, Intensity))
+
+# View the updated dataframe
+head(filtered_spectra)
+
+# Calculate Revised and optimized Index 1 and Index 2 and Index 3
+indices <- filtered_spectra %>%
+  group_by(Sample_ID) %>%
+  summarize(
+    Index_I = sum(Intensity[Closest_Wavenumber %in% c(1650, 1238)]) /
+              sum(Intensity[Closest_Wavenumber %in% c(2924, 2850, 1470, 1405)]),
+    Index_II = sum(Intensity[Closest_Wavenumber %in% c(2924, 2850, 1650, 1470, 1405)]) /
+               sum(Intensity[Closest_Wavenumber %in% c(3400, 1270, 1110, 1080)])
+  )
+
+# View the results
+print(indices)
+# Optional: Export to CSV for review
+write.csv(indices, "Index_I_and_II_subtractions_KM_rev.csv", row.names = FALSE)
+
+# Ensure indices includes metadata
+indices <- indices %>%
+  left_join(metadata, by = c("Sample_ID" = "Sample_Name"))
+
+# Filter out extreme outliers
+indices_filtered <- indices %>%
+  filter(Index_I <= 20, Index_II <= 20)
+
+# Plot Index I (Decomposition)
+index_I_plot <- ggplot(indices_filtered, aes(x = Field_Location, y = Index_I, color = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.7) +
+  facet_wrap(~ SOM_Fraction) +
+  labs(
+    title = "Index I: Degree of Decomposition",
+    x = "Field Location",
+    y = "Index I (Decomposition)",
+    color = "Treatment"
+  ) +
+  scale_color_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 10),
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+print(index_I_plot)
+
+# Save the plot as a PNG file
+png("index_I_KM_rev.png", width=10, height=6, bg="white", res=600, units="in")
+print(index_I_plot)
+dev.off()
+
+# Plot Index II (recalcitrance)
+index_II_plot <- ggplot(indices_filtered, aes(x = Field_Location, y = Index_II, color = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.7) +
+  facet_wrap(~ SOM_Fraction) +
+  labs(
+    title = "Index II: Degree of Recalcitrance",
+    x = "Field Location",
+    y = "Index II (Recalcitrance)",
+    color = "Treatment"
+  ) +
+  scale_color_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+  coord_cartesian(ylim = c(0, 12)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 10),
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+print(index_II_plot)
+
+# Save the plot as a PNG file
+png("index_II_KM_rev.png", width=10, height=6, bg="white", res=600, units="in")
+print(index_II_plot)
+dev.off()
+
+print(index_I_plot)
+print(index_II_plot)
+```
+
+# Helix's Revised + Optimized Index 1, 2, 3
+Aliphatic:Aromatic Index =      2931 + 2871               # Aliphatics
+                            1660 + 1600 + 1540 + 1510     # Aromatics
+            
+Aromatic:Carboxylic Index =     1660 + 1600 + 1540 + 1510 # Aromatics
+                            1724 + 1320 + 1275            # Carboxylic + COH
+                          
+Aliphatic:Carboxylic Index =      2931 + 2871             # Aliphatics
+                            1724 + 1320 + 1275            # Carboxylic + COH
+
+```{r}
+# Define Revised and optimized wavenumbers
+index1_numerator_wavenumbers <- c(2931, 2871)
+index1_denominator_wavenumbers <- c(1660, 1600, 1540, 1510)
+index2_numerator_wavenumbers <- c(1660, 1600, 1540, 1510)
+index2_denominator_wavenumbers <- c(1724, 1320, 1275)
+index3_numerator_wavenumbers <- c(2931, 2871)
+index3_denominator_wavenumbers <- c(1724, 1320, 1275)
+
+# Combine all unique wavenumbers into one vector
+index_wavenumbers <- unique(c(
+  index1_numerator_wavenumbers,
+  index1_denominator_wavenumbers,
+  index2_numerator_wavenumbers,
+  index2_denominator_wavenumbers,
+  index3_numerator_wavenumbers,
+  index3_denominator_wavenumbers
+))
+
+# Summarize the intensity values for Index 1,2, 3
+tolerance <- 2
+filtered_spectra <- spectra_df_long %>%
+  rowwise() %>%
+  mutate(Closest_Wavenumber = index_wavenumbers[which.min(abs(Wavenumber - index_wavenumbers))]) %>%
+  filter(abs(Wavenumber - Closest_Wavenumber) <= tolerance) %>%
+  ungroup()
+
+# Replace negative intensity values with 0
+filtered_spectra <- filtered_spectra %>%
+  mutate(Intensity = ifelse(Intensity < 0, 0, Intensity))
+
+head(filtered_spectra)
+
+# Calculate Revised and optimized Index 1,2,3
+indices <- filtered_spectra %>%
+  group_by(Sample_ID) %>%
+  summarize(
+    Index_1 = sum(Intensity[Closest_Wavenumber %in% c(2931, 2871)]) /
+              sum(Intensity[Closest_Wavenumber %in% c(1660, 1600, 1540, 1510)]),
+    Index_2 = sum(Intensity[Closest_Wavenumber %in% c(1660, 1600, 1540, 1510)]) /
+               sum(Intensity[Closest_Wavenumber %in% c(1724, 1320, 1275)]),
+    Index_3 = sum(Intensity[Closest_Wavenumber %in% c(2931, 2871)]) /
+               sum(Intensity[Closest_Wavenumber %in% c(1724, 1320, 1275)])
+  )
+
+print(indices)
+write.csv(indices, "Helix_Index123_raw.csv", row.names = FALSE)
+
+# Ensure indices includes metadata
+indices <- indices %>%
+  left_join(metadata, by = c("Sample_ID" = "Sample_Name")) %>%
+  mutate(
+    Years_Since_WOR = case_when(
+      Field_Location == "KB95" ~ 3,
+      Field_Location == "KB92" ~ 4,
+      Field_Location == "KB74" ~ 6,
+      Field_Location == "KB31" ~ 15
+    ),
+    Years_Since_WOR = factor(Years_Since_WOR, levels = c(3, 4, 6, 15))
+  )
+
+# Filter out extreme outliers
+indices_filtered <- indices %>%
+  filter(
+    is.finite(Index_1), is.finite(Index_2), is.finite(Index_3),
+    Index_1 <= 20, Index_2 <= 20, Index_3 <= 20
+  )
+
+write.csv(indices_filtered, "Helix_Index123_filt.csv", row.names = FALSE)
+
+# Plot Index 1
+index_1_plot <- ggplot(indices_filtered, aes(x = Years_Since_WOR, y = Index_1, color = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.7) +
+  facet_wrap(~ SOM_Fraction) +
+  labs(
+    title = "Aliphatic : Aromatic Index",
+    x = "Years Since WOR",
+    y = "Aliphatic : Aromatic Index Value",
+    color = "Treatment"
+  ) +
+  scale_color_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+  coord_cartesian(ylim = c(0, 1.1)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, hjust = 1),
+    axis.text.y = element_text(size = 10),
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+print(index_1_plot)
+
+png("Ali.Aro_Index_KM_rev4.png", width=10, height=6, bg="white", res=600, units="in")
+print(index_1_plot)
+dev.off()
+
+# Plot Index 2
+index_2_plot <- ggplot(indices_filtered, aes(x = Years_Since_WOR, y = Index_2, color = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.7) +
+  facet_wrap(~ SOM_Fraction) +
+  labs(
+    title = "Aromatic : Carboxylic Index",
+    x = "Years Since WOR",
+    y = "Aromatic : Carboxylic Index Value",
+    color = "Treatment"
+  ) +
+  scale_color_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+  coord_cartesian(ylim = c(0, 4.8)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, hjust = 1),
+    axis.text.y = element_text(size = 10),
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+print(index_2_plot)
+
+png("Aro.Carb_Index_KM_rev4.png", width=10, height=6, bg="white", res=600, units="in")
+print(index_2_plot)
+dev.off()
+
+# Plot Index 3
+index_3_plot <- ggplot(indices_filtered, aes(x = Years_Since_WOR, y = Index_3, color = Treatment)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.2, size = 1, alpha = 0.7) +
+  facet_wrap(~ SOM_Fraction) +
+  labs(
+    title = "Aliphatic : Carboxylic Index",
+    x = "Years Since WOR",
+    y = "Aliphatic : Carboxylic Index Value",
+    color = "Treatment"
+  ) +
+  scale_color_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+  coord_cartesian(ylim = c(0, 4.8)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10, hjust = 1),
+    axis.text.y = element_text(size = 10),
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+print(index_3_plot)
+
+png("Ali.Carb_Index_KM_rev4.png", width=10, height=6, bg="white", res=600, units="in")
+print(index_3_plot)
+dev.off()
+
+print(index_1_plot)
+print(index_2_plot)
+print(index_3_plot)
+```
