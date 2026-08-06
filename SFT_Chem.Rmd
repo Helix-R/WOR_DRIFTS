@@ -1,0 +1,1975 @@
+---
+title: "Soil Chemistry Data"
+output: html_document
+date: "2024-02-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Whole Orchard Recycling - Space for time 2023
+
+This space for time substitution experiment was conducted in four experimental almond orchards that have whole orchard recycling (WOR) and control treatments. These 4 fields were each sampled in 4 replicate blocks per treatment in Summer 2023 at the University of California Kearney Agricultural Research and Extension Center (UC KARE) located in Fresno County, CA. The soils were first seived to <2 mm and then separated into POM and MAOM fractions. All POM and MAOM samples were air-dried, diluted to 10% (w/w) with pre-ground potassium bromide (KBr), and then analyzed by DRIFTS spectroscopy. Spectral subtractions were performed in OMNIC, to remove the absorbance of inorganic covalent bonds such as Si-O (which compose the mineral contribution of soil).
+
+Space for Time Substitution Design (Fields + Years):
+Field K32 (est. 2008) 15 yrs  |   33 tons wood chips/acre   | Blocks 2,3,4,6
+Field K74 (est. 2017)  6 yrs  |   85 tons wood chips/acre   | Blocks 11,12,13,14
+Field K92 (est. 2019)  4 yrs  |   61 tons wood chips/acre   | Blocks 1,2,3,5
+Field K95 (est. 2020)  3 yrs  |   60 tons wood chips/acre   | Blocks 1,2,3,4
+
+POM and MAOM Sample (#) shorthand key:
+   [K92]         [K31]        [K74]          [K95]
+1. B1 - CN    9.  B2 - CN   17. B11 - CN    25. B1 - CN
+2. B2 - CN    10. B3 - CN   18. B12 - CN    26. B2 - CN
+3. B3 - CN    11. B4 - CN   19. B13 - CN    27. B3 - CN
+4. B5 - CN    12. B6 - CN   20. B14 - CN    28. B4 - CN
+5. B1 - WC    13. B2 - WC   21. B11 - WC    29. B1 - WC
+6. B2 - WC    14. B3 - WC   22. B12 - WC    30. B2 - WC
+7. B3 - WC    15. B4 - WC   23. B13 - WC    31. B3 - WC
+8. B5 - WC    16. B6 - WC   24. B14 - WC    32. B4 - WC 
+Note: CN = Control, WC = Wood Chip treatments
+
+## Load Libraries and Import the metadata
+```{r, echo=FALSE}
+library(rstatix)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(dplyr)
+library(ggtext)
+
+# Load the Metadata and Subtraction Index Values
+SFT_meta <- readRDS(file = "SFT_2023_Metadata.rds")
+SFT_ss_index <- readRDS(file = "Helix_Index123.rds")
+```
+The SFT_meta dataframe includes is for 32 soil samples (4 fields * 2 treatments * 4 blocks) that were sieved to <2 mm prior to collection of the following data:
+- Gravimetric Moisture Content (%)
+- Soil pH [20 g of soil + 20 mL of DIW]
+- SOM content by LOI (%)
+- Water Holding Capacity (%)
+- 18O Resipiration Rate (mg CO2 / 24 hrs)
+- 16O Respiration Rate (mg Co2 / 24 hrs)
+- Dissolved Organic Carbon (mg C / g soil ODW)
+- Dissolved Organic Nitrogen (mg N / g soil ODW)
+- Microbial Biomass Carbon (mg MBC / g ODW)
+- Microbial Biomass Nitrogen (mg MBN / g ODW)
+- Total C [of the <2 mm soil] (%)
+- Total N [of the <2 mm soil] (%)
+- Total C [of the POM fraction] (%)
+- Total N [of the POM fraction] (%)
+- Total C [of the MAOM fraction] (%)
+- Total N [of the MAOM fraction] (%)
+- CN_Ratio (TC % / TN %)
+- POM_CN_Ratio (POM TC % / POM TN %)
+- MAOM_CN_Ratio (MAOM TC % / MAOM TN %)
+
+# SFT_meta Potting
+## Brief plotting of the variables individually
+```{r, echo=FALSE}
+# Boxplot for Gravimetric Moisture Content
+ggplot(SFT_meta, aes(x = Sample, y = Moisture_Content)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Gravimetric Moisture Content (%)")
+
+# Boxplot for Soil pH
+ggplot(SFT_meta, aes(x = Sample, y = pH)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Soil pH)")
+
+# Boxplot for SOM
+ggplot(SFT_meta, aes(x = Sample, y = OM_Content)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("SOM Content (%)")
+
+# Boxplot for WHC
+ggplot(SFT_meta, aes(x = Sample, y = WHC)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Water Holding Capacity (%))")
+
+# Boxplot for DOC
+ggplot(SFT_meta, aes(x = Sample, y = DOC)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Dissolved Organic Carbon (mg C / g soil ODW)")
+
+# Boxplot for DON
+ggplot(SFT_meta, aes(x = Sample, y = DON)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Dissolved Organic Nitrogen (mg N / g soil ODW)")
+
+# Boxplot for MBC
+ggplot(SFT_meta, aes(x = Sample, y = MBC)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Microbial Biomass C (mg MBC / g ODW)")
+
+# Boxplot for MBN
+ggplot(SFT_meta, aes(x = Sample, y = MBN)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Microbial Biomass N (mg MBC / g ODW)")
+
+# Boxplot for TC
+ggplot(SFT_meta, aes(x = Sample, y = TC)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Total C (%)")
+
+# Boxplot for TN
+ggplot(SFT_meta, aes(x = Sample, y = TN)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("Total N (%)")
+
+# Boxplot for 13C POM
+ggplot(SFT_meta, aes(x = Sample, y = POM_13C)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("13 C (‰)")
+
+# Boxplot for 15N POM
+ggplot(SFT_meta, aes(x = Sample, y = POM_15N)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("15 N (‰)")
+
+# Boxplot for 13C MAOM
+ggplot(SFT_meta, aes(x = Sample, y = MAOM_13C)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("13 C (‰)")
+
+# Boxplot for 15N MAOM
+ggplot(SFT_meta, aes(x = Sample, y = MAOM_15N)) +
+  geom_boxplot() +
+  xlab("Sample") +
+  ylab("15 N (‰)")
+```
+
+# Meta Data Means
+```{r}
+# Means for Treatments (does not separate by Field)
+meta_means <- SFT_meta %>%
+  group_by(Treatment) %>%
+  summarize(
+    pH_mean = mean(pH, na.rm = TRUE),
+    pH_sd   = sd(pH, na.rm = TRUE),
+
+    SOM_mean = mean(OM_Content, na.rm = TRUE),
+    SOM_sd = sd(OM_Content, na.rm = TRUE),
+    TC_mean = mean(TC, na.rm = TRUE),
+    TC_sd = sd(TC, na.rm = TRUE),
+    TN_mean = mean(TN, na.rm = TRUE),
+    TN_sd = sd(TN, na.rm = TRUE),
+    CN_Ratio_mean = mean(CN_Ratio, na.rm = TRUE),
+    CN_Ratio_sd = sd(CN_Ratio, na.rm = TRUE),
+
+    POM_CN_Ratio_mean = mean(POM_CN_Ratio, na.rm = TRUE),
+    POM_CN_Ratio_sd = sd(POM_CN_Ratio, na.rm = TRUE),
+    MAOM_CN_Ratio_mean = mean(MAOM_CN_Ratio, na.rm = TRUE),
+    MAOM_CN_Ratio_sd = sd(MAOM_CN_Ratio, na.rm = TRUE),
+
+    POM_TC_mean = mean(POM_TC, na.rm = TRUE),
+    POM_TC_sd = sd(POM_TC, na.rm = TRUE),
+    POM_TN_mean = mean(POM_TN, na.rm = TRUE),
+    POM_TN_sd = sd(POM_TN, na.rm = TRUE),
+    MAOM_TC_mean = mean(MAOM_TC, na.rm = TRUE),
+    MAOM_TC_sd = sd(MAOM_TC, na.rm = TRUE),
+    MAOM_TN_mean = mean(MAOM_TN, na.rm = TRUE),
+    MAOM_TN_sd = sd(MAOM_TN, na.rm = TRUE),
+
+    POM_13C_mean = mean(POM_13C, na.rm = TRUE),
+    POM_13C_sd = sd(POM_13C, na.rm = TRUE),
+    POM_15N_mean = mean(POM_15N, na.rm = TRUE),
+    POM_15N_sd = sd(POM_15N, na.rm = TRUE),
+    MAOM_13C_mean = mean(MAOM_13C, na.rm = TRUE),
+    MAOM_13C_sd = sd(MAOM_13C, na.rm = TRUE),
+    MAOM_15N_mean = mean(MAOM_15N, na.rm = TRUE),
+    MAOM_15N_sd = sd(MAOM_15N, na.rm = TRUE),
+
+    # --- Spectral indices ---
+    POM_Decomposition_Index_mean  = mean(POM_Decomposition_Index, na.rm = TRUE),
+    POM_Decomposition_Index_sd    = sd(POM_Decomposition_Index, na.rm = TRUE),
+    MAOM_Decomposition_Index_mean = mean(MAOM_Decomposition_Index, na.rm = TRUE),
+    MAOM_Decomposition_Index_sd   = sd(MAOM_Decomposition_Index, na.rm = TRUE),
+
+    POM_Recalcitrance_Index_mean  = mean(POM_Recalcitrance_Index, na.rm = TRUE),
+    POM_Recalcitrance_Index_sd    = sd(POM_Recalcitrance_Index, na.rm = TRUE),
+    MAOM_Recalcitrance_Index_mean = mean(MAOM_Recalcitrance_Index, na.rm = TRUE),
+    MAOM_Recalcitrance_Index_sd   = sd(MAOM_Recalcitrance_Index, na.rm = TRUE)
+  ) %>%
+  rename(
+    "POM Aliphatic C : Aromatic C_mean"  = POM_Decomposition_Index_mean,
+    "POM Aliphatic C : Aromatic C_sd"    = POM_Decomposition_Index_sd,
+    "MAOM Aliphatic C : Aromatic C_mean" = MAOM_Decomposition_Index_mean,
+    "MAOM Aliphatic C : Aromatic C_sd"   = MAOM_Decomposition_Index_sd,
+    "POM Aromatic C : Carboxylic C_mean"  = POM_Recalcitrance_Index_mean,
+    "POM Aromatic C : Carboxylic C_sd"    = POM_Recalcitrance_Index_sd,
+    "MAOM Aromatic C : Carboxylic C_mean" = MAOM_Recalcitrance_Index_mean,
+    "MAOM Aromatic C : Carboxylic C_sd"   = MAOM_Recalcitrance_Index_sd
+  )
+
+print(meta_means)
+
+# Means for Treatment x Field
+meta_means_field <- SFT_meta %>%
+  group_by(Treatment, Field) %>%
+  summarize(
+    pH_mean = mean(pH, na.rm = TRUE),
+    pH_sd   = sd(pH, na.rm = TRUE),
+
+    SOM_mean = mean(OM_Content, na.rm = TRUE),
+    SOM_sd = sd(OM_Content, na.rm = TRUE),
+    TC_mean = mean(TC, na.rm = TRUE),
+    TC_sd = sd(TC, na.rm = TRUE),
+    TN_mean = mean(TN, na.rm = TRUE),
+    TN_sd = sd(TN, na.rm = TRUE),
+    CN_Ratio_mean = mean(CN_Ratio, na.rm = TRUE),
+    CN_Ratio_sd = sd(CN_Ratio, na.rm = TRUE),
+
+    POM_CN_Ratio_mean = mean(POM_CN_Ratio, na.rm = TRUE),
+    POM_CN_Ratio_sd = sd(POM_CN_Ratio, na.rm = TRUE),
+    MAOM_CN_Ratio_mean = mean(MAOM_CN_Ratio, na.rm = TRUE),
+    MAOM_CN_Ratio_sd = sd(MAOM_CN_Ratio, na.rm = TRUE),
+
+    POM_TC_mean = mean(POM_TC, na.rm = TRUE),
+    POM_TC_sd = sd(POM_TC, na.rm = TRUE),
+    POM_TN_mean = mean(POM_TN, na.rm = TRUE),
+    POM_TN_sd = sd(POM_TN, na.rm = TRUE),
+    MAOM_TC_mean = mean(MAOM_TC, na.rm = TRUE),
+    MAOM_TC_sd = sd(MAOM_TC, na.rm = TRUE),
+    MAOM_TN_mean = mean(MAOM_TN, na.rm = TRUE),
+    MAOM_TN_sd = sd(MAOM_TN, na.rm = TRUE),
+
+    POM_13C_mean = mean(POM_13C, na.rm = TRUE),
+    POM_13C_sd = sd(POM_13C, na.rm = TRUE),
+    POM_15N_mean = mean(POM_15N, na.rm = TRUE),
+    POM_15N_sd = sd(POM_15N, na.rm = TRUE),
+    MAOM_13C_mean = mean(MAOM_13C, na.rm = TRUE),
+    MAOM_13C_sd = sd(MAOM_13C, na.rm = TRUE),
+    MAOM_15N_mean = mean(MAOM_15N, na.rm = TRUE),
+    MAOM_15N_sd = sd(MAOM_15N, na.rm = TRUE),
+
+    # --- Spectral indices ---
+    POM_Decomposition_Index_mean  = mean(POM_Decomposition_Index, na.rm = TRUE),
+    POM_Decomposition_Index_sd    = sd(POM_Decomposition_Index, na.rm = TRUE),
+    MAOM_Decomposition_Index_mean = mean(MAOM_Decomposition_Index, na.rm = TRUE),
+    MAOM_Decomposition_Index_sd   = sd(MAOM_Decomposition_Index, na.rm = TRUE),
+
+    POM_Recalcitrance_Index_mean  = mean(POM_Recalcitrance_Index, na.rm = TRUE),
+    POM_Recalcitrance_Index_sd    = sd(POM_Recalcitrance_Index, na.rm = TRUE),
+    MAOM_Recalcitrance_Index_mean = mean(MAOM_Recalcitrance_Index, na.rm = TRUE),
+    MAOM_Recalcitrance_Index_sd   = sd(MAOM_Recalcitrance_Index, na.rm = TRUE)
+  ) %>%
+  rename(
+    "POM Aliphatic C : Aromatic C_mean"  = POM_Decomposition_Index_mean,
+    "POM Aliphatic C : Aromatic C_sd"    = POM_Decomposition_Index_sd,
+    "MAOM Aliphatic C : Aromatic C_mean" = MAOM_Decomposition_Index_mean,
+    "MAOM Aliphatic C : Aromatic C_sd"   = MAOM_Decomposition_Index_sd,
+    "POM Aromatic C : Carboxylic C_mean"  = POM_Recalcitrance_Index_mean,
+    "POM Aromatic C : Carboxylic C_sd"    = POM_Recalcitrance_Index_sd,
+    "MAOM Aromatic C : Carboxylic C_mean" = MAOM_Recalcitrance_Index_mean,
+    "MAOM Aromatic C : Carboxylic C_sd"   = MAOM_Recalcitrance_Index_sd
+  )
+
+print(meta_means_field)
+
+# Export Treatment means
+write.csv(
+  meta_means,
+  file = "meta_means_by_treatment.csv",
+  row.names = FALSE
+)
+
+# Export Treatment x Field means
+write.csv(
+  meta_means_field,
+  file = "meta_means_by_treatment_field.csv",
+  row.names = FALSE
+)
+
+# Full <2 mm soil metadata
+# Vector of columns to exclude (POM/MAOM-related)
+# Columns to exclude (all POM/MAOM-related)
+exclude_cols <- c(
+  "POM_13C", "POM_15N", "MAOM_13C", "MAOM_15N",
+  "POM_TC", "POM_TN", "MAOM_TC", "MAOM_TN",
+  "POM_CN_Ratio", "MAOM_CN_Ratio",
+  "percent_MAOM", "percent_POM",
+  "MAOM_Index_I", "MAOM_Index_II",
+  "POM_Index_I", "POM_Index_II",
+  "MAOM_Decomposition_Index", "MAOM_Recalcitrance_Index",
+  "POM_Decomposition_Index", "POM_Recalcitrance_Index"
+)
+
+meta_means_field_2mm <- SFT_meta %>%
+  # keep everything except POM/MAOM variables
+  select(-all_of(exclude_cols)) %>%
+  group_by(Treatment, Field) %>%
+  summarise(
+    across(
+      where(is.numeric),
+      list(
+        mean = ~ mean(.x, na.rm = TRUE),
+        sd   = ~ sd(.x,   na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    ),
+    .groups = "drop"
+  )
+
+meta_means_field_2mm
+
+# Export if desired
+write.csv(
+  meta_means_field_2mm,
+  file = "meta_means_2mm.csv",
+  row.names = FALSE
+)
+```
+
+## Plotting the POM and MAOM data for TC
+```{r, echo=FALSE}
+# Select the columns you want to include
+TC_columns <- c("TC", "POM_TC", "MAOM_TC")
+
+# Gather the data to reshape it and filter columns
+SFT_Cmeta_long <- SFT_meta %>%
+  dplyr::select(Sample, Field, Block, Treatment, TC, POM_TC, MAOM_TC) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_Cmeta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("TC", "POM_TC", "MAOM_TC", "Ratio_POM_MAOM")
+
+# Apply the custom order to Field and Parameter as factors
+SFT_Cmeta_long <- SFT_Cmeta_long %>%
+  mutate(
+    Field = factor(Field, levels = field_order),
+    Parameter = factor(Parameter, levels = parameter_order)
+  )
+
+averages <- averages %>%
+  mutate(
+    Field = factor(Field, levels = field_order),
+    Parameter = factor(Parameter, levels = parameter_order)
+  )
+
+# Create the plot with the custom order
+TC_bxplt <- ggplot(SFT_Cmeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(
+    title = "Soil Carbon Data",
+    y = "Total Carbon Content (%)",
+    x = "Years Since WOR"
+  ) +
+  theme_gray() +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(
+    ~ Parameter,
+    scales = "free_y",
+    ncol = 2,
+    labeller = labeller(
+      Parameter = c(
+        "TC" = "<2 mm Soil TC",
+        "MAOM_TC" = "MAOM TC",
+        "POM_TC" = "POM TC",
+        "Ratio_POM_MAOM" = "POM TC : MAOM TC"
+      )
+    )
+  )
+
+# Print the plot
+print(TC_bxplt)
+
+## Figure Style Revision ##
+TC_bxplt <- ggplot(SFT_Cmeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Total Carbon (%)", x = "Years Since WOR") +
+  theme_gray(base_size = 12) + 
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, labeller = labeller(
+      Parameter = c(
+        "TC" = "<2 mm Soil",
+        "MAOM_TC" = "MAOM",
+        "POM_TC" = "POM")))
+
+# Print the combined plot
+print(TC_bxplt)
+
+# Save the plot as PNG
+png("SFT_TC_bxplt.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(TC_bxplt)
+dev.off()
+```
+
+## Plotting the POM and MAOM data for TN
+```{r, echo=FALSE}
+# Select the columns you want to include
+TN_columns <- c("TN", "POM_TN", "MAOM_TN")
+
+# Gather the data to reshape it and filter columns
+SFT_Nmeta_long <- SFT_meta %>%
+  dplyr::select(Sample, Field, Block, Treatment, TN, POM_TN, MAOM_TN) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("TN", "POM_TN", "MAOM_TN")
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_Nmeta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Ensure averages Field is a factor with specified levels
+averages$Field <- factor(averages$Field, levels = field_order)
+
+# Create a new column that combines Field and Parameter for faceting
+SFT_Nmeta_long <- SFT_Nmeta_long %>%
+  mutate(Field_Parameter = paste(Field, Parameter, sep = "_"))
+
+averages <- averages %>%
+  mutate(Field_Parameter = paste(Field, Parameter, sep = "_"))
+
+# Reorder the Parameter variable of the facets
+SFT_Nmeta_long$Parameter <- factor(SFT_Nmeta_long$Parameter, levels = c("TN", "MAOM_TN", "POM_TN"))
+averages$Parameter <- factor(averages$Parameter, levels = c("TN", "POM_TN", "MAOM_TN"))
+
+# Convert Field to a factor with the specified levels
+SFT_Nmeta_long$Field <- factor(SFT_Nmeta_long$Field, levels = field_order)
+SFT_Nmeta_long$Parameter <- factor(SFT_Nmeta_long$Parameter, levels = parameter_order)
+
+# Create a single boxplot for %N values with customized labels
+TN_bxplt <- ggplot(SFT_Nmeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Total Nitrogen (%)", x = "Years Since WOR") +
+  theme_gray(base_size = 12) + 
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, labeller = labeller(
+      Parameter = c(
+        "TN" = "<2 mm Soil",
+        "MAOM_TN" = "MAOM",
+        "POM_TN" = "POM")))
+
+# Print the combined plot
+print(TN_bxplt)
+
+# To save
+png("SFT_TN_bxplt.png", width=12, height=6, bg="white", res=600, units="in")
+print(TN_bxplt)
+dev.off()
+```
+
+## Plotting MAOM C:N against POM C:N
+```{r}
+# Simple scatter plot of raw data
+ggplot(SFT_meta, aes(x = POM_CN_Ratio, y = MAOM_CN_Ratio,
+                     color = Treatment, shape = Field)) +
+  geom_point(size = 3, alpha = 0.9) +
+  geom_smooth(aes(color = Treatment), method = "lm", se = FALSE, size = 0.8) +
+  labs(
+    x = "POM C:N Ratio",
+    y = "MAOM C:N Ratio",
+    color = "Treatment",
+    shape = "Field"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+# Relabel and plot for publication
+```{r}
+#library(ggplot2)
+#library(dplyr)
+
+# Prepare data
+CNR_df <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, POM_CN_Ratio, MAOM_CN_Ratio) %>%
+  filter(!is.na(POM_CN_Ratio), !is.na(MAOM_CN_Ratio))
+
+# Calculate regression statistics per Treatment group
+reg_stats <- CNR_df %>%
+  group_by(Treatment) %>%
+  summarize(
+    slope = coef(lm(MAOM_CN_Ratio ~ POM_CN_Ratio))[2],
+    intercept = coef(lm(MAOM_CN_Ratio ~ POM_CN_Ratio))[1],
+    r = cor(POM_CN_Ratio, MAOM_CN_Ratio),
+    p = cor.test(POM_CN_Ratio, MAOM_CN_Ratio)$p.value,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = sprintf(
+      "Treatment %s:\ny = %.2fX + %.2f\nr = %.2f, P %s %.3g",
+      Treatment,
+      slope, intercept, r,
+      ifelse(p < 0.001, "<", "="),
+      ifelse(p < 0.001, 0.001, p)
+    )
+  )
+
+# Ensure factor order for Field so shapes appear in desired order
+CNR_df$Field <- factor(CNR_df$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Base plot
+CNR_scatter <- ggplot(CNR_df, aes(x = POM_CN_Ratio, y = MAOM_CN_Ratio, color = Treatment)) +
+  # Add faint 1:1 line first (behind data)
+  geom_abline(slope = 1, intercept = 0, color = "grey70", linewidth = 0.6, alpha = 0.6) +
+  geom_point(aes(shape = Field), size = 3, alpha = 0.8) +
+  geom_smooth(aes(color = Treatment), method = "lm", se = FALSE, size = 0.7) +
+  labs(
+    x = "POM C:N Ratio",
+    y = "MAOM C:N Ratio",
+    color = "Treatment",
+    shape = "Years\nSince\nWOR"
+  ) +
+  coord_equal() +
+  scale_x_continuous(limits = c(6.5, 16.5)) +
+  scale_y_continuous(limits = c(6.5, 16.5)) +
+  theme_gray(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    legend.box = "vertical",
+    legend.box.just = "left",
+    legend.key.height = unit(18, "pt"),  # Increase vertical spacing between shapes
+    legend.spacing.y = unit(4, "pt")     # Add small buffer between legend entries
+  ) +
+  scale_color_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+  scale_shape_manual(
+    values = c("K95" = 16,  # circle
+               "K92" = 17,  # triangle
+               "K74" = 15,  # square
+               "K31" = 3),  # plus
+    labels = c("K95" = "3",
+               "K92" = "4",
+               "K74" = "6",
+               "K31" = "15")
+  ) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = guide_legend(
+      order = 2,
+      override.aes = list(size = 4)
+    )
+  )
+
+# Add regression labels
+CNR_scatter <- CNR_scatter +
+  annotate("text", x = 9, y = 16,
+           label = reg_stats$label[reg_stats$Treatment == "CN"],
+           color = "#1F77B4", hjust = 0, size = 4, fontface = "bold") +
+  annotate("text", x = 9, y = 14,
+           label = reg_stats$label[reg_stats$Treatment == "WC"],
+           color = "#FF7F0E", hjust = 0, size = 4, fontface = "bold")
+
+# Display the plot
+print(CNR_scatter)
+
+# Save the plot
+png("SFT_CN_scatter_Year.png", width = 6, height = 6, bg = "white", res = 600, units = "in")
+print(CNR_scatter)
+dev.off()
+```
+
+
+## Plotting 13C and 15 POM and MAOM
+```{r}
+# Select the columns you want to include
+iso_columns <- c("POM_13C", "POM_15N", "MAOM_13C", "MAOM_15N")
+
+# Gather the data to reshape and filter columns
+SFT_iso_long <- SFT_meta %>%
+  dplyr::select(Sample, Field, Block, Treatment, all_of(iso_columns)) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("POM_13C", "MAOM_13C", "POM_15N", "MAOM_15N")
+
+# Calculate averages for each Field + Treatment + Parameter
+averages <- SFT_iso_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value, na.rm = TRUE),
+            SE = sd(Value, na.rm = TRUE) / sqrt(n()), .groups = "drop")
+
+# Factor levels for fields and parameters to control order in plot
+SFT_iso_long <- SFT_iso_long %>%
+  mutate(
+    Field = factor(Field, levels = field_order),
+    Parameter = factor(Parameter, levels = parameter_order)
+  )
+averages <- averages %>%
+  mutate(
+    Field = factor(Field, levels = field_order),
+    Parameter = factor(Parameter, levels = parameter_order)
+  )
+
+# Custom facet labels
+facet_labels <- c(
+  "POM_13C"  = "POM δ13C",
+  "POM_15N"  = "POM δ15N",
+  "MAOM_13C" = "MAOM δ13C",
+  "MAOM_15N" = "MAOM δ15N"
+)
+
+# Create the plot
+iso_bxplt <- ggplot(SFT_iso_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange",
+               position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages,
+                aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE),
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Isotopic Value (‰)", x = "Years Since WOR") +
+  theme_gray(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+                    labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4",
+                              "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, labeller = labeller(Parameter = facet_labels))
+
+# Print the plot
+print(iso_bxplt)
+
+# Save the plot
+png("SFT_iso_bxplt.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(iso_bxplt)
+dev.off()
+
+library(patchwork)
+
+# δ13C plot (top row)
+iso_bxplt_13C <- ggplot(
+  filter(SFT_iso_long, grepl("13C", Parameter)),
+  aes(x = Field, y = Value, fill = Treatment)
+) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange",
+               position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = filter(averages, grepl("13C", Parameter)),
+                aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE),
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Isotopic Value (‰)", x = "Years Since WOR") +
+  theme_gray(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+                    labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4",
+                              "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, labeller = labeller(Parameter = facet_labels)) +
+  scale_y_continuous(limits = c(-30, -22))
+
+# δ15N plot (bottom row)
+iso_bxplt_15N <- ggplot(
+  filter(SFT_iso_long, grepl("15N", Parameter)),
+  aes(x = Field, y = Value, fill = Treatment)
+) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange",
+               position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = filter(averages, grepl("15N", Parameter)),
+                aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE),
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Isotopic Value (‰)", x = "Years Since WOR") +
+  theme_gray(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+                    labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4",
+                              "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, labeller = labeller(Parameter = facet_labels)) +
+  scale_y_continuous(limits = c(0, 8))
+
+# Combine into one figure
+iso_bxplt <- iso_bxplt_13C / iso_bxplt_15N
+print(iso_bxplt)
+
+# Save the plot
+png("SFT_iso_bxplt.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(iso_bxplt)
+dev.off()
+```
+
+## POM δ13C vs MAOM δ13C
+```{r}
+# Prepare dataset and filter missing values
+C13_df <- SFT_iso_long %>%
+  filter(Parameter %in% c("POM_13C", "MAOM_13C")) %>%
+  select(Sample, Field, Block, Treatment, Parameter, Value) %>%
+  pivot_wider(names_from = Parameter, values_from = Value) %>%
+  filter(!is.na(POM_13C), !is.na(MAOM_13C))
+
+# Compute regression stats by Treatment
+reg_stats_13C <- C13_df %>%
+  group_by(Treatment) %>%
+  summarize(
+    slope = coef(lm(MAOM_13C ~ POM_13C))[2],
+    intercept = coef(lm(MAOM_13C ~ POM_13C))[1],
+    r = cor(POM_13C, MAOM_13C),
+    p = cor.test(POM_13C, MAOM_13C)$p.value,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = sprintf("Treatment %s:\ny = %.2fX + %.2f\nr = %.2f, P %s %.3g",
+                    Treatment, slope, intercept, r,
+                    ifelse(p < 0.001, "<", "="),
+                    ifelse(p < 0.001, 0.001, p))
+  )
+
+# Plot
+p13 <- ggplot(C13_df, aes(x = POM_13C, y = MAOM_13C, color = Treatment)) +
+  # Add faint 1:1 reference line behind data
+  geom_abline(slope = 1, intercept = 0, color = "grey70", linewidth = 0.6, alpha = 0.6) +
+  geom_point(aes(shape = Field), size = 3, alpha = 0.8) +
+  geom_smooth(aes(color = Treatment), method = "lm", se = FALSE, size = 0.7) +
+  labs(
+    x = expression(bold("POM " * delta^{13} * "C (‰)")),
+    y = expression(bold("MAOM " * delta^{13} * "C (‰)")),
+    color = "Treatment", shape = "Years Since WOR"
+  ) +
+  coord_equal() +
+  scale_x_continuous(limits = c(-29, -24)) +
+  scale_y_continuous(limits = c(-29, -24)) +
+  scale_color_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+                     labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_shape_manual(
+    values = c("K95" = 16, "K92" = 17, "K74" = 15, "K31" = 3),
+    labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")
+  ) +
+  theme_gray(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12)
+  ) +
+  annotate("text", x = -26, y = -27, label = reg_stats_13C$label[reg_stats_13C$Treatment == "CN"],
+           color = "#1F77B4", hjust = 0, size = 4, fontface = "bold") +
+  annotate("text", x = -26, y = -28, label = reg_stats_13C$label[reg_stats_13C$Treatment == "WC"],
+           color = "#FF7F0E", hjust = 0, size = 4, fontface = "bold")
+
+print(p13)
+
+png("SFT_13C_scatter_Year.png", width = 6, height = 6, bg = "white", res = 600, units = "in")
+print(p13)
+dev.off()
+```
+
+## POM δ15N vs MAOM δ15N
+```{r}
+# Prepare dataset and filter missing values
+N15_df <- SFT_iso_long %>%
+  filter(Parameter %in% c("POM_15N", "MAOM_15N")) %>%
+  select(Sample, Field, Block, Treatment, Parameter, Value) %>%
+  pivot_wider(names_from = Parameter, values_from = Value) %>%
+  filter(!is.na(POM_15N), !is.na(MAOM_15N))
+
+# Compute regression stats by Treatment
+reg_stats_15N <- N15_df %>%
+  group_by(Treatment) %>%
+  summarize(
+    slope = coef(lm(MAOM_15N ~ POM_15N))[2],
+    intercept = coef(lm(MAOM_15N ~ POM_15N))[1],
+    r = cor(POM_15N, MAOM_15N),
+    p = cor.test(POM_15N, MAOM_15N)$p.value,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = sprintf("Treatment %s:\ny = %.2fX + %.2f\nr = %.2f, P %s %.3g",
+                    Treatment, slope, intercept, r,
+                    ifelse(p < 0.001, "<", "="),
+                    ifelse(p < 0.001, 0.001, p))
+  )
+
+# Plot
+p15 <- ggplot(N15_df, aes(x = POM_15N, y = MAOM_15N, color = Treatment)) +
+  # Add faint 1:1 reference line behind data
+  geom_abline(slope = 1, intercept = 0, color = "grey70", linewidth = 0.6, alpha = 0.6) +
+  geom_point(aes(shape = Field), size = 3, alpha = 0.8) +
+  geom_smooth(aes(color = Treatment), method = "lm", se = FALSE, size = 0.7) +
+  labs(
+    x = expression(bold("POM " * delta^{15} * "N (‰)")),
+    y = expression(bold("MAOM " * delta^{15} * "N (‰)")),
+    color = "Treatment", shape = "Years Since WOR"
+  ) +
+  coord_equal() +
+  scale_x_continuous(limits = c(0, 8)) +
+  scale_y_continuous(limits = c(0, 8)) +
+  scale_color_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+                     labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_shape_manual(
+    values = c("K95" = 16, "K92" = 17, "K74" = 15, "K31" = 3),
+    labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")
+  ) +
+  theme_gray(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12)
+  ) +
+  annotate("text", x = 5, y = 3, label = reg_stats_15N$label[reg_stats_15N$Treatment == "CN"],
+           color = "#1F77B4", hjust = 0, size = 4, fontface = "bold") +
+  annotate("text", x = 5, y = 1.5, label = reg_stats_15N$label[reg_stats_15N$Treatment == "WC"],
+           color = "#FF7F0E", hjust = 0, size = 4, fontface = "bold")
+
+print(p15)
+
+png("SFT_15N_scatter_Year.png", width = 6, height = 6, bg = "white", res = 600, units = "in")
+print(p15)
+dev.off()
+```
+
+
+## Plotting the OM Content, TC, POM_TC, and MAOM_TC (%)
+```{r, echo=FALSE}
+#library(rstatix)
+#library(ggplot2)
+#library(ggpubr)
+#library(tidyr)
+#library(dplyr)
+
+# Select the columns you want to include
+TC_columns <- c("OM_Content", "TC", "POM_TC", "MAOM_TC")
+
+# Gather the data to reshape it and filter columns
+SFT_Cmeta_long <- SFT_meta %>%
+  dplyr::select(Sample, Field, Block, Treatment, OM_Content, TC, POM_TC, MAOM_TC) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("OM_Content", "TC", "POM_TC", "MAOM_TC")
+
+# Convert Field and Parameter to factors with specified levels
+SFT_Cmeta_long$Field <- factor(SFT_Cmeta_long$Field, levels = field_order)
+SFT_Cmeta_long$Parameter <- factor(SFT_Cmeta_long$Parameter, levels = parameter_order)
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_Cmeta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Ensure averages Field and Parameter are factors with specified levels
+averages$Field <- factor(averages$Field, levels = field_order)
+averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
+
+# Create a single boxplot for SOM and Carbon values with customized labels
+SOM_TC_bxplt <- ggplot(SFT_Cmeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "SOM and Total Carbon (%)", x = "Years Since WOR") +
+  theme_gray() +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    legend.position = "bottom"
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("OM_Content" = "<2mm SOM", "TC" = "<2 mm Soil TC", "MAOM_TC" = "MAOM TC", "POM_TC" = "POM TC")))
+
+# Print the combined plot
+print(SOM_TC_bxplt)
+
+# To save
+png("SFT_SOM_TC_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+print(SOM_TC_bxplt)
+dev.off()
+```
+
+## Plotting the DOC and MBC (mg C / g ODW)
+```{r, echo=FALSE}
+#library(rstatix)
+#library(ggplot2)
+#library(ggpubr)
+#library(tidyr)
+#library(dplyr)
+
+# Select the columns you want to include
+OC_columns <- c("DOC", "MBC")
+
+# Gather the data to reshape it and filter columns
+SFT_OC_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, DOC, MBC) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("DOC", "MBC")
+
+# Convert Field and Parameter to factors with specified levels
+SFT_OC_meta_long$Field <- factor(SFT_OC_meta_long$Field, levels = field_order)
+SFT_OC_meta_long$Parameter <- factor(SFT_OC_meta_long$Parameter, levels = parameter_order)
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_OC_meta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Ensure averages Field and Parameter are factors with specified levels
+averages$Field <- factor(averages$Field, levels = field_order)
+averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
+
+# Create a single boxplot for DOC and MBC values with customized labels
+OC_bxplt <- ggplot(SFT_OC_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Dissolved Organic & Microbial Biomass Carbon (mg C / g soil ODW)", x = "Years Since WOR") +
+  theme_gray() +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    legend.position = "bottom"
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("DOC" = "Dissolved Organic Carbon", "MBC" = "Microbial Biomass Carbon")))
+
+# Print the combined plot
+print(OC_bxplt)
+
+# To save
+png("SFT_OC_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+print(OC_bxplt)
+dev.off()
+```
+
+## Plotting the DON and MBN (mg N / g ODW)
+```{r, echo=FALSE}
+#library(rstatix)
+#library(ggplot2)
+#library(ggpubr)
+#library(tidyr)
+#library(dplyr)
+
+# Select the columns you want to include
+ON_columns <- c("DON", "MBN")
+
+# Gather the data to reshape it and filter columns
+SFT_ON_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, DON, MBN) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("DON", "MBN")
+
+# Convert Field and Parameter to factors with specified levels
+SFT_ON_meta_long$Field <- factor(SFT_ON_meta_long$Field, levels = field_order)
+SFT_ON_meta_long$Parameter <- factor(SFT_ON_meta_long$Parameter, levels = parameter_order)
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_ON_meta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Ensure averages Field and Parameter are factors with specified levels
+averages$Field <- factor(averages$Field, levels = field_order)
+averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
+
+# Create a single boxplot for DON and MBN values with customized labels
+ON_bxplt <- ggplot(SFT_ON_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Dissolved Organic & Microbial Biomass Nitrogen (mg N / g soil ODW)", x = "Years Since WOR") +
+  theme_gray() +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    legend.position = "bottom"
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("DON" = "Dissolved Organic Nitrogen", "MBN" = "Microbial Biomass Nitrogen")))
+
+# Print the combined plot
+print(ON_bxplt)
+
+# To save
+png("SFT_ON_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+print(ON_bxplt)
+dev.off()
+```
+
+## Plotting the C:N Ratios (TC / TN)
+```{r, echo=FALSE}
+#library(rstatix)
+#library(ggplot2)
+#library(ggpubr)
+#library(tidyr)
+#library(dplyr)
+
+# Select the columns you want to include
+CN_columns <- c("CN_Ratio", "POM_CN_Ratio", "MAOM_CN_Ratio")
+
+# Gather the data to reshape it and filter columns
+SFT_CN_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, CN_Ratio, POM_CN_Ratio, MAOM_CN_Ratio) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("CN_Ratio", "POM_CN_Ratio", "MAOM_CN_Ratio")
+
+# Convert Field and Parameter to factors with specified levels
+SFT_CN_meta_long$Field <- factor(SFT_CN_meta_long$Field, levels = field_order)
+SFT_CN_meta_long$Parameter <- factor(SFT_CN_meta_long$Parameter, levels = parameter_order)
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_CN_meta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Create a new column that combines Field and Parameter for faceting
+SFT_CN_meta_long <- SFT_CN_meta_long %>%
+  mutate(Field_Parameter = paste(Field, Parameter, sep = "_"))
+
+averages <- averages %>%
+  mutate(Field_Parameter = paste(Field, Parameter, sep = "_"))
+
+# Create a single boxplot for C:N values with customized labels
+CN_bxplt <- ggplot(SFT_CN_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "C:N Ratio", x = "Years Since WOR") +
+  theme_gray() +
+    theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, labeller = labeller(
+      Parameter = c(
+        "CN_Ratio" = "< 2mm Soil",
+        "MAOM_CN_Ratio" = "MAOM",
+        "POM_CN_Ratio" = "POM")))
+
+# Print the combined plot
+print(CN_bxplt)
+
+# To save
+png("SFT_CN_bxplt.png", width=12, height=6, bg="white", res=600, units="in")
+print(CN_bxplt)
+dev.off()
+```
+
+## Plotting the ratio of POM to MAOM
+```{r, echo=FALSE}
+#library(rstatix)
+#library(ggplot2)
+#library(ggpubr)
+#library(tidyr)
+#library(dplyr)
+
+# Select the columns you want to include
+fraction_columns <- c("OM_Content", "percent_MAOM", "percent_POM")
+
+# Gather the data to reshape it and filter columns
+SFT_fraction_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, OM_Content, percent_MAOM, percent_POM) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field
+field_order <- c("K95", "K92", "K74", "K31")
+
+# Convert Field to a factor with the specified levels
+SFT_fraction_meta_long$Field <- factor(SFT_fraction_meta_long$Field, levels = field_order)
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_fraction_meta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Ensure averages Field is a factor with specified levels
+averages$Field <- factor(averages$Field, levels = field_order)
+
+# Create a single boxplot for the selected values with customized labels
+wood_fractionation_bxplt <- ggplot(SFT_fraction_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(title = "Percent SOM, POM, and MAOM", y = "Percent", x = "Years since WOR") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, scales = "free_y")
+
+# Print the combined plot
+print(wood_fractionation_bxplt)
+
+# Save the plot
+png("wood_fractionation_bxplt_clean.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(wood_fractionation_bxplt)
+dev.off()
+```
+
+## Plotting the WHC, pH, and CO2 respiration rates
+# Note: CO2 respiration was measured from jar incubations of soil, with 16O-water and 18O-water.
+```{r, echo=FALSE}
+#library(rstatix)
+#library(ggplot2)
+#library(ggpubr)
+#library(tidyr)
+#library(dplyr)
+
+# Select the columns you want to include
+X_columns <- c("WHC", "pH", "X16O_Respiration_Rate", "X18O_Respiration_Rate")
+
+# Gather the data to reshape it and filter columns
+SFT_X_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, WHC, pH, X16O_Respiration_Rate, X18O_Respiration_Rate) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c("WHC", "pH", "X16O_Respiration_Rate", "X18O_Respiration_Rate")
+
+# Convert Field and Parameter to factors with specified levels
+SFT_X_meta_long$Field <- factor(SFT_X_meta_long$Field, levels = field_order)
+SFT_X_meta_long$Parameter <- factor(SFT_X_meta_long$Parameter, levels = parameter_order)
+
+# Calculate averages for each Block + Treatment combination within each Field
+averages <- SFT_X_meta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value),
+            SE = sd(Value) / sqrt(n())) %>%
+  ungroup()
+
+# Ensure averages Field and Parameter are factors with specified levels
+averages$Field <- factor(averages$Field, levels = field_order)
+averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
+
+# Create a single boxplot for WHC and pH values with customized labels
+X_bxplt <- ggplot(SFT_X_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "WHC (%), pH (1:1), CO2 Respiration (mg CO2 / 24 hrs)", x = "Years Since WOR") +
+  theme_gray() +
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12),
+    legend.position = "bottom"
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("WHC" = "Water Holding Capacity", "pH" = "Soil pH (1:1 DIW)", "X16O_Respiration_Rate" = "CO2 Respiration Rate1 (mg CO2 / 24 hrs)", "X18O_Respiration_Rate" = "CO2 Respiration Rate2 (mg CO2 / 24 hrs)")))
+
+# Print the combined plot
+print(X_bxplt)
+
+# To save
+png("SFT_X_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+print(X_bxplt)
+dev.off()
+```
+
+# Plots that need to be exported separatley
+OM_Content, pH, WHC, DOC, DON, X16O_Respiration (CO2 respiration with natural, 16O-water)
+
+# Soil Organic Matter Content
+```{r}
+library(grid)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Filter data and prepare long format
+OM_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, OM_Content)
+
+OM_long <- OM_data %>%
+  pivot_longer(cols = OM_Content, names_to = "Parameter", values_to = "Value")
+
+# Set factor levels for consistent x-axis ordering
+OM_long$Field <- factor(OM_long$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Add custom facet label for strip
+OM_long$Facet <- "<2 mm Soil"
+
+# Calculate summary statistics per Treatment × Field group
+OM_avg <- OM_long %>%
+  group_by(Field, Treatment) %>%
+  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
+
+# Create boxplot with mean ± SE
+OM_plot <- ggplot(OM_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(0.8), color = "black") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "pointrange",
+    aes(group = Treatment),
+    position = position_dodge(width = 0.8),
+    shape = 21,
+    fill = "black",
+    color = "black"
+  ) +
+  geom_errorbar(
+    data = OM_avg,
+    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    position = position_dodge(width = 0.8),
+    width = 0.25,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~Facet, strip.position = "top") +
+  labs(
+    y = "Organic Matter Content (%)",
+    x = "Years Since WOR"
+  ) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  scale_fill_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+theme_bw(base_size = 12) +  # ensures font size matches TN plot
+theme(
+  panel.background = element_rect(fill = "grey95", color = NA),
+  panel.grid.major = element_line(color = "white"),
+  panel.grid.minor = element_line(color = "white"),
+  strip.background = element_rect(fill = "grey80", color = NA),
+  strip.text = element_text(size = 12),
+  axis.title = element_text(face = "bold", size = 12),
+  axis.text = element_text(size = 12),
+  legend.title = element_text(face = "bold", size = 12),
+  legend.text = element_text(size = 12),
+  legend.position = "none",
+  axis.text.x = element_text(angle = 0, hjust = 0.5)
+)
+
+# Print
+print(OM_plot)
+
+# To save
+png("OM_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(OM_plot)
+dev.off()
+```
+
+# Soil pH (1:1, Soil to DIW)
+```{r}
+# Filter data and prepare long format
+pH_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, pH)
+
+pH_long <- pH_data %>%
+  pivot_longer(cols = pH, names_to = "Parameter", values_to = "Value")
+
+# Set factor levels for consistent x-axis ordering
+pH_long$Field <- factor(pH_long$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Add custom facet label for strip
+pH_long$Facet <- "<2mm Soil"
+
+# Calculate summary statistics per Treatment × Field group
+pH_avg <- pH_long %>%
+  group_by(Field, Treatment) %>%
+  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
+
+# Create boxplot with mean ± SE
+pH_plot <- ggplot(pH_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(0.8), color = "black") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "pointrange",
+    aes(group = Treatment),
+    position = position_dodge(width = 0.8),
+    shape = 21,
+    fill = "black",
+    color = "black"
+  ) +
+  geom_errorbar(
+    data = pH_avg,
+    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    position = position_dodge(width = 0.8),
+    width = 0.25,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~Facet, strip.position = "top") +
+  labs(
+    y = "pH (1:1 DIW)",
+    x = "Years Since WOR"
+  ) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  scale_fill_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+theme_bw(base_size = 12) +  # ensures font size matches TN plot
+theme(
+  panel.background = element_rect(fill = "grey95", color = NA),
+  panel.grid.major = element_line(color = "white"),
+  panel.grid.minor = element_line(color = "white"),
+  strip.background = element_rect(fill = "grey80", color = NA),
+  strip.text = element_text(size = 12),
+  axis.title = element_text(face = "bold", size = 12),
+  axis.text = element_text(size = 12),
+  legend.title = element_text(face = "bold", size = 12),
+  legend.text = element_text(size = 12),
+  legend.position = "none",
+  axis.text.x = element_text(angle = 0, hjust = 0.5)
+)
+
+# Print
+print(pH_plot)
+
+# To save
+png("pH_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(pH_plot)
+dev.off()
+```
+
+# Water Holding Capacity
+```{r}
+# Filter data and prepare long format
+WHC_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, WHC)
+
+WHC_long <- WHC_data %>%
+  pivot_longer(cols = WHC, names_to = "Parameter", values_to = "Value")
+
+# Set factor levels for consistent x-axis ordering
+WHC_long$Field <- factor(WHC_long$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Add custom facet label for strip
+WHC_long$Facet <- "<2mm Soil"
+
+# Calculate summary statistics per Treatment × Field group
+WHC_avg <- WHC_long %>%
+  group_by(Field, Treatment) %>%
+  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
+
+# Create boxplot with mean ± SE
+WHC_plot <- ggplot(WHC_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(0.8), color = "black") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "pointrange",
+    aes(group = Treatment),
+    position = position_dodge(width = 0.8),
+    shape = 21,
+    fill = "black",
+    color = "black"
+  ) +
+  geom_errorbar(
+    data = WHC_avg,
+    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    position = position_dodge(width = 0.8),
+    width = 0.25,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~Facet, strip.position = "top") +
+  labs(
+    y = "Water Holding Capacity (%)",
+    x = "Years Since WOR"
+  ) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  scale_fill_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+theme_bw(base_size = 12) +  # ensures font size matches TN plot
+theme(
+  panel.background = element_rect(fill = "grey95", color = NA),
+  panel.grid.major = element_line(color = "white"),
+  panel.grid.minor = element_line(color = "white"),
+  strip.background = element_rect(fill = "grey80", color = NA),
+  strip.text = element_text(size = 12),
+  axis.title = element_text(face = "bold", size = 12),
+  axis.text = element_text(size = 12),
+  legend.title = element_text(face = "bold", size = 12),
+  legend.text = element_text(size = 12),
+  legend.position = "none",
+  axis.text.x = element_text(angle = 0, hjust = 0.5)
+)
+
+# Print
+print(WHC_plot)
+
+# To save
+png("WHC_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(WHC_plot)
+dev.off()
+```
+
+# Dissolved Organic Carbon
+```{r}
+# Filter data and prepare long format
+DOC_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, DOC)
+
+DOC_long <- DOC_data %>%
+  pivot_longer(cols = DOC, names_to = "Parameter", values_to = "Value")
+
+# Set factor levels for consistent x-axis ordering
+DOC_long$Field <- factor(DOC_long$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Add custom facet label for strip
+DOC_long$Facet <- "<2mm Soil"
+
+# Calculate summary statistics per Treatment × Field group
+DOC_avg <- DOC_long %>%
+  group_by(Field, Treatment) %>%
+  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
+
+# Create boxplot with mean ± SE
+DOC_plot <- ggplot(DOC_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(0.8), color = "black") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "pointrange",
+    aes(group = Treatment),
+    position = position_dodge(width = 0.8),
+    shape = 21,
+    fill = "black",
+    color = "black"
+  ) +
+  geom_errorbar(
+    data = DOC_avg,
+    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    position = position_dodge(width = 0.8),
+    width = 0.25,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~Facet, strip.position = "top") +
+  labs(
+    y = "Dissolved Organic Carbon (mg C / g Soil)",
+    x = "Years Since WOR"
+  ) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  scale_fill_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+theme_bw(base_size = 12) +  # ensures font size matches TN plot
+theme(
+  panel.background = element_rect(fill = "grey95", color = NA),
+  panel.grid.major = element_line(color = "white"),
+  panel.grid.minor = element_line(color = "white"),
+  strip.background = element_rect(fill = "grey80", color = NA),
+  strip.text = element_text(size = 12),
+  axis.title = element_text(face = "bold", size = 12),
+  axis.text = element_text(size = 12),
+  legend.title = element_text(face = "bold", size = 12),
+  legend.text = element_text(size = 12),
+  legend.position = "none",
+  axis.text.x = element_text(angle = 0, hjust = 0.5)
+)
+
+# Print
+print(DOC_plot)
+
+# To save
+png("DOC_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(DOC_plot)
+dev.off()
+```
+
+# Dissolved Organic Nitrogen
+```{r}
+# Filter data and prepare long format
+DON_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, DON)
+
+DON_long <- DON_data %>%
+  pivot_longer(cols = DON, names_to = "Parameter", values_to = "Value")
+
+# Set factor levels for consistent x-axis ordering
+DON_long$Field <- factor(DON_long$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Add custom facet label for strip
+DON_long$Facet <- "<2mm Soil"
+
+# Calculate summary statistics per Treatment × Field group
+DON_avg <- DON_long %>%
+  group_by(Field, Treatment) %>%
+  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
+
+# Create boxplot with mean ± SE
+DON_plot <- ggplot(DON_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(0.8), color = "black") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "pointrange",
+    aes(group = Treatment),
+    position = position_dodge(width = 0.8),
+    shape = 21,
+    fill = "black",
+    color = "black"
+  ) +
+  geom_errorbar(
+    data = DON_avg,
+    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    position = position_dodge(width = 0.8),
+    width = 0.25,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~Facet, strip.position = "top") +
+  labs(
+    y = "Dissolved Organic Nitrogen (mg N / g Soil)",
+    x = "Years Since WOR"
+  ) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  scale_fill_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+theme_bw(base_size = 12) +  # ensures font size matches TN plot
+theme(
+  panel.background = element_rect(fill = "grey95", color = NA),
+  panel.grid.major = element_line(color = "white"),
+  panel.grid.minor = element_line(color = "white"),
+  strip.background = element_rect(fill = "grey80", color = NA),
+  strip.text = element_text(size = 12),
+  axis.title = element_text(face = "bold", size = 12),
+  axis.text = element_text(size = 12),
+  legend.title = element_text(face = "bold", size = 12),
+  legend.text = element_text(size = 12),
+  legend.position = "none",
+  axis.text.x = element_text(angle = 0, hjust = 0.5)
+)
+
+# Print
+print(DON_plot)
+
+# To save
+png("DON_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(DON_plot)
+dev.off()
+```
+
+# (16O-water) CO2 Respiration Rate
+```{r}
+# Filter data and prepare long format
+X16O_Respiration_Rate_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, X16O_Respiration_Rate)
+
+X16O_Respiration_Rate_long <- X16O_Respiration_Rate_data %>%
+  pivot_longer(cols = X16O_Respiration_Rate, names_to = "Parameter", values_to = "Value")
+
+# Set factor levels for consistent x-axis ordering
+X16O_Respiration_Rate_long$Field <- factor(X16O_Respiration_Rate_long$Field, levels = c("K95", "K92", "K74", "K31"))
+
+# Add custom facet label for strip
+X16O_Respiration_Rate_long$Facet <- "<2mm Soil"
+
+# Calculate summary statistics per Treatment × Field group
+X16O_Respiration_Rate_avg <- X16O_Respiration_Rate_long %>%
+  group_by(Field, Treatment) %>%
+  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
+
+# Create boxplot with mean ± SE
+X16O_Respiration_Rate_plot <- ggplot(X16O_Respiration_Rate_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(0.8), color = "black") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "pointrange",
+    aes(group = Treatment),
+    position = position_dodge(width = 0.8),
+    shape = 21,
+    fill = "black",
+    color = "black"
+  ) +
+  geom_errorbar(
+    data = X16O_Respiration_Rate_avg,
+    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    position = position_dodge(width = 0.8),
+    width = 0.25,
+    inherit.aes = FALSE
+  ) +
+  facet_wrap(~Facet, strip.position = "top") +
+  labs(
+    y = "CO2 Respiration Rate (mg CO2 / 24 hrs)",
+    x = "Years Since WOR"
+  ) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
+  scale_fill_manual(
+    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+    labels = c("CN" = "Control", "WC" = "WOR")
+  ) +
+theme_bw(base_size = 12) +  # ensures font size matches TN plot
+theme(
+  panel.background = element_rect(fill = "grey95", color = NA),
+  panel.grid.major = element_line(color = "white"),
+  panel.grid.minor = element_line(color = "white"),
+  strip.background = element_rect(fill = "grey80", color = NA),
+  strip.text = element_text(size = 12),
+  axis.title = element_text(face = "bold", size = 12),
+  axis.text = element_text(size = 12),
+  legend.title = element_text(face = "bold", size = 12),
+  legend.text = element_text(size = 12),
+  legend.position = "none",
+  axis.text.x = element_text(angle = 0, hjust = 0.5)
+)
+
+# Print
+print(X16O_Respiration_Rate_plot)
+
+# To save
+png("X16O_Respiration_Rate_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(X16O_Respiration_Rate_plot)
+dev.off()
+```
+
+## Plotting Helix Index 1 (Decomposition) and 2 (Recalcitrance)
+Indices were calculated in accordance with the wavenumber corresponding to the 13 organic bands described in Margenot et al 2015: https://acsess.onlinelibrary.wiley.com/doi/10.2136/sssaj2015.02.0070
+
+# These indices were revised for Wood (aromatic hydrocarbon) Amendment
+Index 1 = (2931 + 2871) / (1660 + 1600 + 1540 + 1510)
+# ( Aliphatic : Aromatic )
+
+Index 2 = (1660 + 1600 + 1540 + 1510) / (1724 + 1320 + 1275)
+# ( Aromatic : Carboxylic )
+```{r, echo=FALSE}
+library(rstatix)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(dplyr)
+library(ggsignif)
+
+# Select the columns you want to include
+Index_columns <- c("POM_Decomposition_Index", "MAOM_Decomposition_Index",
+                   "POM_Recalcitrance_Index", "MAOM_Recalcitrance_Index")
+
+# Gather the data to reshape it and filter columns
+SFT_Imeta_long <- SFT_meta %>%
+  dplyr::select(Sample, Field, Block, Treatment, all_of(Index_columns)) %>%
+  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
+
+# Function to remove outliers using IQR
+remove_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  x[x < (Q1 - 1.5 * IQR) | x > (Q3 + 1.5 * IQR)] <- NA
+  return(x)
+}
+
+# Apply outlier removal only to POM indices
+SFT_Imeta_long <- SFT_Imeta_long %>%
+  group_by(Parameter) %>%
+  mutate(Value = ifelse(Parameter %in% c("POM_Decomposition_Index", "POM_Recalcitrance_Index"),
+                        remove_outliers(Value), Value)) %>%
+  ungroup()
+
+# Calculate averages for each Field + Treatment + Parameter
+averages <- SFT_Imeta_long %>%
+  group_by(Field, Treatment, Parameter) %>%
+  summarise(Mean = mean(Value, na.rm = TRUE),
+            SE = sd(Value, na.rm = TRUE) / sqrt(n()), .groups = "drop")
+
+# Define custom order for Field and Parameter
+field_order <- c("K95", "K92", "K74", "K31")
+parameter_order <- c(
+  "POM_Decomposition_Index",
+  "MAOM_Decomposition_Index",
+  "POM_Recalcitrance_Index",
+  "MAOM_Recalcitrance_Index"
+)
+
+# Apply factor levels (ordering) to Parameter and Field
+SFT_Imeta_long <- SFT_Imeta_long %>%
+  mutate(
+    Field = factor(Field, levels = field_order),
+    Parameter = factor(Parameter, levels = parameter_order)
+  )
+averages <- averages %>%
+  mutate(
+    Field = factor(Field, levels = field_order),
+    Parameter = factor(Parameter, levels = parameter_order)
+  )
+
+# Create the plot
+Decomp_Recal_bxplt <- ggplot(SFT_Imeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange",
+               position = position_dodge(width = 0.8), show.legend = TRUE) +
+  geom_errorbar(data = averages,
+                aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE),
+                position = position_dodge(width = 0.8), width = 0.25) +
+  labs(y = "Index Value", x = "Years Since WOR") +
+  theme_gray(base_size = 12) + 
+  theme(
+    axis.title = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 12),
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  ) +
+  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
+                    labels = c("CN" = "Control", "WC" = "WOR")) +
+  scale_x_discrete(labels = c("K95" = "3", "K92" = "4",
+                              "K74" = "6", "K31" = "15")) +
+  facet_wrap(~ Parameter, scales = "free_y", labeller = labeller(
+    Parameter = c(
+      "POM_Decomposition_Index"  = "POM Aliphatic C : Aromatic C",
+      "MAOM_Decomposition_Index" = "MAOM Aliphatic C : Aromatic C",
+      "POM_Recalcitrance_Index"  = "POM Aromatic C : Carboxylic C",
+      "MAOM_Recalcitrance_Index" = "MAOM Aromatic C : Carboxylic C"
+    )
+  ))
+
+# Print the plot
+print(Decomp_Recal_bxplt)
+
+# Save the plot
+png("SFT_decomp_recal_bxplt2.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(Decomp_Recal_bxplt)
+dev.off()
+```
+
+## Proof of C removal (supplemental methods figure)
+# Plotting the TC removal from NaOCl oxidation of POM and MAOM samples
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggtext)
+
+# Load the data
+SFT_subtraction <- readRDS("POM_MAOM_TC_TN_Subtraction.rds")
+str(SFT_subtraction)
+
+# Create a new column that combines Block and Treatment for x-axis labeling
+SFT_subtraction <- SFT_subtraction %>%
+  mutate(Block_Treatment = paste0(Treatment, "_", "B", Block))
+
+# Combine Field, Treatment, and Block into one label for the x-axis
+SFT_subtraction <- SFT_subtraction %>%
+  mutate(Field_Treatment_Block = paste(Field, Treatment, Block, sep = "_"))
+
+# Reshape the data to long format for easier plotting of both C_total and C_remaining
+SFT_long <- SFT_subtraction %>%
+  pivot_longer(cols = c(C_total, C_remaining), names_to = "C_type", values_to = "C_value")
+
+# Define the exact x-axis order you want
+x_order <- c(
+  paste0("KB31_CN_", 1:4),
+  paste0("KB31_WC_", 1:4),
+  paste0("KB74_CN_", 1:4),
+  paste0("KB74_WC_", 1:4),
+  paste0("KB92_CN_", 1:4),
+  paste0("KB92_WC_", 1:4),
+  paste0("KB95_CN_", 1:4),
+  paste0("KB95_WC_", 1:4)
+)
+
+# Make sure x-axis order matches the desired order
+SFT_long <- SFT_long %>%
+  mutate(Field_Treatment_Block = factor(Field_Treatment_Block, levels = x_order))
+
+# Define the exact x-axis order you want
+x_order <- c(
+  paste0("KB31_CN_", 1:4),
+  paste0("KB31_WC_", 1:4),
+  paste0("KB74_CN_", 1:4),
+  paste0("KB74_WC_", 1:4),
+  paste0("KB92_CN_", 1:4),
+  paste0("KB92_WC_", 1:4),
+  paste0("KB95_CN_", 1:4),
+  paste0("KB95_WC_", 1:4)
+)
+
+# Make sure x-axis order matches the desired order
+SFT_long <- SFT_long %>%
+  mutate(Field_Treatment_Block = factor(Field_Treatment_Block, levels = x_order))
+
+# Define custom colors for treatments
+label_df <- SFT_subtraction %>%
+  distinct(Field_Treatment_Block, Treatment) %>%
+  mutate(
+    Field_Treatment_Block = factor(Field_Treatment_Block, levels = x_order),
+    x_pos = as.numeric(Field_Treatment_Block),
+    label_color = ifelse(Treatment == "CN", "#1F77B4", "#FF7F0E")
+  )
+
+# Create the plot
+C_removal_plot <- ggplot(SFT_long, aes(x = Field_Treatment_Block, y = C_value, color = C_type, group = C_type)) +
+  # Add lines for C_total and C_remaining
+  geom_line() +
+  geom_point() +
+  # Facet by SOM
+  facet_wrap(~ SOM) +
+  # Customize labels
+  labs(
+    x = "Field x Treatment x Block",
+    y = "Total C (%)",
+    title = "Total C and C Removal by NaOCl oxidation",
+    color = "Total C (%)"
+  ) +
+  # Add custom colored x-axis labels
+  geom_text(
+    data = label_df,
+    aes(x = x_pos, y = -0.08, label = Field_Treatment_Block, color = Treatment),
+    inherit.aes = FALSE,
+    angle = 45,
+    hjust = 1,
+    vjust = 1,
+    size = 3.5,
+    show.legend = FALSE
+  ) +
+  scale_color_manual(values = c(
+    C_total = "#17becf",
+    C_remaining = "#ff7f0e",
+    CN = "#1F77B4",
+    WC = "#FF7F0E"
+  )) +
+  scale_x_discrete(labels = NULL) +
+  coord_cartesian(clip = "off") +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_text(face = "bold", size = 12, margin = margin(t = 33)),
+    axis.title.y = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 12),
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom",
+    legend.box.margin = margin(t = -8),
+    plot.margin = margin(10, 10, 10, 10)
+  )
+
+C_removal_plot
+
+# To save
+png("SFT_TC_removal.png", width=13, height=6, bg="white", res=600, units="in")
+print(C_removal_plot)
+dev.off()
+```

@@ -1,0 +1,1869 @@
+---
+title: "Soil Chemistry Statistics"
+output: html_document
+date: "2024-02-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Whole Orchard Recycling - Space for time 2023
+
+This space for time substitution experiment was conducted in four experimental almond orchards that have whole orchard recycling (WOR) and control treatments. These 4 fields were each sampled in 4 replicate blocks per treatment in Summer 2023 at the University of California Kearney Agricultural Research and Extension Center (UC KARE) located in Fresno County, CA. The soils were first seived to <2 mm and then separated into POM and MAOM fractions. All POM and MAOM samples were air-dried, diluted to 10% (w/w) with pre-ground potassium bromide (KBr), and then analyzed by DRIFTS spectroscopy. Spectral subtractions were performed in OMNIC, to remove the absorbance of inorganic covalent bonds such as Si-O (which compose the mineral contribution of soil).
+
+Space for Time Substitution Design (Fields + Years):
+Field K32 (est. 2008) 15 yrs  |   33 tons wood chips/acre   | Blocks 2,3,4,6
+Field K74 (est. 2017)  6 yrs  |   85 tons wood chips/acre   | Blocks 11,12,13,14
+Field K92 (est. 2019)  4 yrs  |   61 tons wood chips/acre   | Blocks 1,2,3,5
+Field K95 (est. 2020)  3 yrs  |   60 tons wood chips/acre   | Blocks 1,2,3,4
+
+POM and MAOM Sample (#) shorthand key:
+   [K92]         [K31]        [K74]          [K95]
+1. B1 - CN    9.  B2 - CN   17. B11 - CN    25. B1 - CN
+2. B2 - CN    10. B3 - CN   18. B12 - CN    26. B2 - CN
+3. B3 - CN    11. B4 - CN   19. B13 - CN    27. B3 - CN
+4. B5 - CN    12. B6 - CN   20. B14 - CN    28. B4 - CN
+5. B1 - WC    13. B2 - WC   21. B11 - WC    29. B1 - WC
+6. B2 - WC    14. B3 - WC   22. B12 - WC    30. B2 - WC
+7. B3 - WC    15. B4 - WC   23. B13 - WC    31. B3 - WC
+8. B5 - WC    16. B6 - WC   24. B14 - WC    32. B4 - WC 
+Note: CN = Control, WC = Wood Chip treatments
+
+## Load Libraries and Import the metadata
+```{r, echo=FALSE}
+# Load Packages
+library(lme4)
+library(lmerTest)   # Provides p-values for lmer models
+library(ggplot2)
+library(car)
+library(DescTools)  
+library(rcompanion) # For plotNormalHistogram
+library(emmeans)
+library(dplyr) # used to filter
+
+# Load the Metadata and Subtraction Index Values
+SFT_meta <- readRDS(file = "SFT_2023_Metadata.rds")
+SFT_ss_index <- readRDS(file = "Helix_Index123.rds")
+
+# Adjust the class of experimental variables
+str(SFT_meta) # Need to convert Treatment, Field, Block, and Year to factors
+SFT_meta$Treatment <- as.factor(SFT_meta$Treatment)
+SFT_meta$Field <- as.factor(SFT_meta$Field)
+SFT_meta$Year_of_WOR <- as.factor(SFT_meta$Year_of_WOR)
+SFT_meta$Block_ID <- as.factor(SFT_meta$Block_ID)
+```
+The SFT_meta dataframe includes is for 32 soil samples (4 fields * 2 treatments * 4 blocks) that were sieved to <2 mm prior to collection of the following data:
+- Gravimetric Moisture Content (%)
+- Soil pH [20 g of soil + 20 mL of DIW]
+- SOM content by LOI (%)
+- Water Holding Capacity (%)
+- 18O Resipiration Rate (mg CO2 / 24 hrs)
+- 16O Respiration Rate (mg Co2 / 24 hrs)
+- Dissolved Organic Carbon (mg C / g soil ODW)
+- Dissolved Organic Nitrogen (mg N / g soil ODW)
+- Microbial Biomass Carbon (mg MBC / g ODW)
+- Microbial Biomass Nitrogen (mg MBN / g ODW)
+- Total C [of the <2 mm soil] (%)
+- Total N [of the <2 mm soil] (%)
+- Total C [of the POM fraction] (%)
+- Total N [of the POM fraction] (%)
+- Total C [of the MAOM fraction] (%)
+- Total N [of the MAOM fraction] (%)
+- CN_Ratio (TC % / TN %)
+- POM_CN_Ratio (POM TC % / POM TN %)
+- MAOM_CN_Ratio (MAOM TC % / MAOM TN %)
+
+## Mixed Models - Two-way ANOVAs with lm
+
+# Soil Organic Matter
+```{r}
+# Fit the model
+OM_model <- lm(OM_Content ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+OM_results <- anova(OM_model)
+
+# Display the ANOVA results
+print(OM_results) # Treatment:Field is significant !
+
+# Check residuals of the lm model
+plot(OM_model)
+qqnorm(residuals(OM_model))
+plotNormalHistogram(residuals(OM_model))
+shapiro.test(residuals(OM_model))  # Shapiro-Wilk test for normality
+#W = 0.93441, p-value = 0.05203
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Inverse transformation worked best
+SFT_meta$inv_SOM <- 1 / SFT_meta$OM_Content
+inv_SOM_lm <- lm(inv_SOM ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(inv_SOM_lm))  # looks best, and highest p-value
+# W = 0.98953, p-value = 0.9855
+qqnorm(residuals(inv_SOM_lm))
+plotNormalHistogram(residuals(inv_SOM_lm))
+
+# ------------------------------------
+# SOM ANOVA
+# ------------------------------------
+anova(inv_SOM_lm)
+#Response: inv_SOM
+#                Df   Sum Sq  Mean Sq F value    Pr(>F)    
+#Treatment        1 0.080968 0.080968 41.9446 1.069e-06 ***
+#Field            3 0.005625 0.001875  0.9714 0.4224930    
+#Treatment:Field  3 0.047486 0.015829  8.1999 0.0006249 ***
+#Residuals       24 0.046329 0.001930  
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+SOM_Treatment_PH <- emmeans(inv_SOM_lm, ~ Treatment | Field)
+pairwise_contrasts_SOM <- contrast(SOM_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_SOM)
+plot(SOM_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0119 0.0311 24  -0.383  0.7049
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.1621 0.0311 24   5.217  <.0001 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.1809 0.0311 24   5.823  <.0001 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.0713 0.0311 24   2.296  0.0307 *
+
+SOM_Field_PH <- emmeans(inv_SOM_lm, ~ Field | Treatment)
+pairwise_contrasts_SOM <- contrast(SOM_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_SOM)
+plot(SOM_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.0861 0.0311 24  -2.772  0.0486 *
+# K31 - K92  -0.1196 0.0311 24  -3.849  0.0040 *
+# K31 - K95  -0.0701 0.0311 24  -2.255  0.1373
+# K74 - K92  -0.0335 0.0311 24  -1.078  0.7062
+# K74 - K95   0.0161 0.0311 24   0.517  0.9543
+# K92 - K95   0.0495 0.0311 24   1.594  0.4006
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74   0.0879 0.0311 24   2.829  0.0430 *
+# K31 - K92   0.0732 0.0311 24   2.357  0.1131
+# K31 - K95   0.0132 0.0311 24   0.425  0.9737
+# K74 - K92  -0.0146 0.0311 24  -0.472  0.9646
+# K74 - K95  -0.0747 0.0311 24  -2.404  0.1033
+# K92 - K95  -0.0600 0.0311 24  -1.933  0.2415
+```
+
+# Total Carbon
+```{r}
+# Fit the model
+TC_model <- lm(TC ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+TC_results <- anova(TC_model)
+
+# Display the ANOVA results
+print(TC_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(TC_model)
+qqnorm(residuals(TC_model))
+plotNormalHistogram(residuals(TC_model))
+shapiro.test(residuals(TC_model))
+# W = 0.94406, p-value = 0.09766
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Cube-root transformation worked best
+SFT_meta$cbrt_TC <- SFT_meta$TC^(1/3)
+cbrt_TC_lm <- lm(cbrt_TC ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(cbrt_TC_lm)) # looks best, and highest p-value
+# W = 0.98767, p-value = 0.9675
+qqnorm(residuals(cbrt_TC_lm))
+plotNormalHistogram(residuals(cbrt_TC_lm))
+
+# ------------------------------------
+# TC ANOVA
+# ------------------------------------
+anova(cbrt_TC_lm)
+#Response: cbrt_TC
+#                Df   Sum Sq  Mean Sq F value    Pr(>F)    
+#Treatment        1 0.146201 0.146201 37.0831 2.735e-06 ***
+#Field            3 0.065780 0.021927  5.5616 0.0048241 ** 
+#Treatment:Field  3 0.098853 0.032951  8.3579 0.0005585 ***
+#Residuals       24 0.094620 0.003943 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+TC_Treatment_PH <- emmeans(cbrt_TC_lm, ~ Treatment | Field)
+pairwise_contrasts_TC <- contrast(TC_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_TC)
+plot(TC_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.0185 0.0444 24   0.418  0.6800
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.2198 0.0444 24  -4.951  <.0001 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.2599 0.0444 24  -5.853  <.0001 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0796 0.0444 24  -1.793  0.0856
+
+TC_Field_PH <- emmeans(cbrt_TC_lm, ~ Field | Treatment)
+pairwise_contrasts_TC <- contrast(TC_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_TC)
+plot(TC_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  0.06702 0.0444 24   1.510  0.4476
+# K31 - K92  0.12513 0.0444 24   2.818  0.0440 *
+# K31 - K95  0.12199 0.0444 24   2.748  0.0512
+# K74 - K92  0.05811 0.0444 24   1.309  0.5664
+# K74 - K95  0.05496 0.0444 24   1.238  0.6096
+# K92 - K95 -0.00315 0.0444 24  -0.071  0.9999
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74 -0.17132 0.0444 24  -3.859  0.0039 *
+# K31 - K92 -0.15328 0.0444 24  -3.452  0.0104 *
+# K31 - K95  0.02384 0.0444 24   0.537  0.9491
+# K74 - K92  0.01804 0.0444 24   0.406  0.9768
+# K74 - K95  0.19516 0.0444 24   4.396  0.0010 *
+# K92 - K95  0.17712 0.0444 24   3.989  0.0028 *
+```
+
+# Total Nitrogen
+```{r}
+# Fit the model
+TN_model <- lm(TN ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+TN_results <- anova(TN_model)
+
+# Display the ANOVA results
+print(TN_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(TN_model)
+qqnorm(residuals(TN_model))
+plotNormalHistogram(residuals(TN_model))
+shapiro.test(residuals(TN_model))
+# W = 0.92772, p-value = 0.03384
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Inverse transformation worked best
+SFT_meta$inv_TN <- 1 / SFT_meta$TN
+inv_TN_lm <- lm(inv_TN ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(inv_TN_lm)) # looks best, and highest p-value
+# W = 0.96377, p-value = 0.3471
+qqnorm(residuals(inv_TN_lm))
+plotNormalHistogram(residuals(inv_TN_lm))
+
+# ------------------------------------
+# TN ANOVA
+# ------------------------------------
+anova(inv_TN_lm)
+#Response: inv_TN
+#                Df  Sum Sq Mean Sq F value   Pr(>F)   
+#Treatment        1 105.261 105.261 12.4307 0.001729 **
+#Field            3  25.570   8.523  1.0066 0.406996   
+#Treatment:Field  3  99.323  33.108  3.9098 0.020919 * 
+#Residuals       24 203.228   8.468  
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+TN_Treatment_PH <- emmeans(inv_TN_lm, ~ Treatment | Field)
+pairwise_contrasts_TN <- contrast(TN_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_TN)
+plot(TN_Treatment_PH)
+
+#Field = K31:
+# contrast estimate   SE df t.ratio p.value
+# CN - WC     -1.24 2.06 24  -0.605  0.5511
+
+#Field = K74:
+# contrast estimate   SE df t.ratio p.value
+# CN - WC      7.58 2.06 24   3.686  0.0012 *
+
+#Field = K92:
+# contrast estimate   SE df t.ratio p.value
+# CN - WC      6.30 2.06 24   3.063  0.0053 *
+
+#Field = K95:
+# contrast estimate   SE df t.ratio p.value
+# CN - WC      1.86 2.06 24   0.906  0.3738
+
+TN_Field_PH <- emmeans(inv_TN_lm, ~ Field | Treatment)
+pairwise_contrasts_TN <- contrast(TN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_TN)
+plot(TN_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate   SE df t.ratio p.value
+# K31 - K74   -5.175 2.06 24  -2.515  0.0829
+# K31 - K92   -3.247 2.06 24  -1.578  0.4095
+# K31 - K95   -3.405 2.06 24  -1.655  0.3685
+# K74 - K92    1.928 2.06 24   0.937  0.7854
+# K74 - K95    1.769 2.06 24   0.860  0.8252
+# K92 - K95   -0.159 2.06 24  -0.077  0.9998
+
+#Treatment = WC:
+# contrast  estimate   SE df t.ratio p.value
+# K31 - K74    3.654 2.06 24   1.776  0.3089
+# K31 - K92    4.301 2.06 24   2.090  0.1849
+# K31 - K95   -0.297 2.06 24  -0.144  0.9989
+# K74 - K92    0.647 2.06 24   0.314  0.9890
+# K74 - K95   -3.951 2.06 24  -1.920  0.2464
+# K92 - K95   -4.598 2.06 24  -2.234  0.1426
+```
+
+# C:N Ratio
+```{r}
+# Fit the model
+CN_model <- lm(CN_Ratio ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+CN_results <- anova(CN_model)
+
+# Display the ANOVA results
+print(CN_results) # Year_of_WOR:Treatment is NOT significant
+
+# Check residuals of the lm model
+plot(CN_model)
+qqnorm(residuals(CN_model))
+plotNormalHistogram(residuals(CN_model))
+shapiro.test(residuals(CN_model))
+# W = 0.97251, p-value = 0.5715
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Untransformed data worked best
+
+# ------------------------------------
+# C:N Ratio ANOVA
+# ------------------------------------
+anova(CN_model)
+#Response: CN_Ratio
+#                Df Sum Sq Mean Sq F value    Pr(>F)    
+#Treatment        1 11.513 11.5134 10.4682  0.003524 ** 
+#Field            3 46.325 15.4417 14.0399 1.718e-05 ***
+#Treatment:Field  3  5.171  1.7237  1.5672  0.223236    
+#Residuals       24 26.396  1.0998  
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+CN_Treatment_PH <- emmeans(CN_model, ~ Treatment | Field)
+pairwise_contrasts_CN <- contrast(CN_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_CN)
+plot(CN_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    -0.545 0.742 24  -0.735  0.4693
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    -0.511 0.742 24  -0.689  0.4972
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    -2.496 0.742 24  -3.366  0.0026 *
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    -1.246 0.742 24  -1.680  0.1059
+
+CN_Field_PH <- emmeans(CN_model, ~ Field | Treatment)
+pairwise_contrasts_CN <- contrast(CN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_CN)
+plot(CN_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   -1.916 0.742 24  -2.583  0.0721
+# K31 - K92    1.726 0.742 24   2.328  0.1197
+# K31 - K95    1.626 0.742 24   2.192  0.1542
+# K74 - K92    3.642 0.742 24   4.911  0.0003 *
+# K74 - K95    3.541 0.742 24   4.775  0.0004 *
+# K92 - K95   -0.101 0.742 24  -0.136  0.9991
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   -1.882 0.742 24  -2.538  0.0792
+# K31 - K92   -0.225 0.742 24  -0.303  0.9901
+# K31 - K95    0.925 0.742 24   1.247  0.6041
+# K74 - K92    1.657 0.742 24   2.234  0.1426
+# K74 - K95    2.806 0.742 24   3.785  0.0047 *
+# K92 - K95    1.150 0.742 24   1.550  0.4247
+```
+
+# POM Total Carbon
+```{r}
+# Fit the model
+POM_TC_model <- lm(POM_TC ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+POM_TC_results <- anova(POM_TC_model)
+
+# Display the ANOVA results
+print(POM_TC_results) # Treatment:Field is significant !
+
+# Check residuals of the lm model
+plot(POM_TC_model)
+qqnorm(residuals(POM_TC_model))
+plotNormalHistogram(residuals(POM_TC_model))
+shapiro.test(residuals(POM_TC_model))
+# W = 0.86485, p-value = 0.0008853
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Log10 transformation worked best
+SFT_meta$log10_POM_TC <- log10(SFT_meta$POM_TC)
+log_POM_TC_lm <- lm(log10_POM_TC ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(log_POM_TC_lm))  # looks best, and highest p-value
+# W = 0.97325, p-value = 0.5935
+qqnorm(residuals(log_POM_TC_lm))
+plotNormalHistogram(residuals(log_POM_TC_lm))
+
+# ------------------------------------
+# POM TC ANOVA
+# ------------------------------------
+anova(log_POM_TC_lm)
+#Response: log10_POM_TC
+#                Df  Sum Sq Mean Sq F value    Pr(>F)    
+#Treatment        1 0.55599 0.55599 39.0464 1.854e-06 ***
+#Field            3 0.59978 0.19993 14.0406 1.718e-05 ***
+#Treatment:Field  3 0.40102 0.13367  9.3877 0.0002749 ***
+#Residuals       24 0.34174 0.01424 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+POM_TC_Treatment_PH <- emmeans(log_POM_TC_lm, ~ Treatment | Field)
+pairwise_contrasts_POM_TC <- contrast(POM_TC_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_POM_TC)
+plot(POM_TC_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.0516 0.0844 24   0.611  0.5468
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.3514 0.0844 24  -4.164  0.0003 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.5612 0.0844 24  -6.651  <.0001 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.1935 0.0844 24  -2.294  0.0309 *
+
+POM_TC_Field_PH <- emmeans(log_POM_TC_lm, ~ Field | Treatment)
+pairwise_contrasts_POM_TC <- contrast(POM_TC_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_TC)
+plot(POM_TC_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74   0.0716 0.0844 24   0.849  0.8306
+# K31 - K92   0.2927 0.0844 24   3.469  0.0100 *
+# K31 - K95   0.3686 0.0844 24   4.369  0.0011 *
+# K74 - K92   0.2211 0.0844 24   2.621  0.0668
+# K74 - K95   0.2970 0.0844 24   3.520  0.0089 *
+# K92 - K95   0.0759 0.0844 24   0.900  0.8051
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.3313 0.0844 24  -3.926  0.0033 *
+# K31 - K92  -0.3200 0.0844 24  -3.793  0.0046 *
+# K31 - K95   0.1235 0.0844 24   1.464  0.4737
+# K74 - K92   0.0113 0.0844 24   0.134  0.9991
+# K74 - K95   0.4548 0.0844 24   5.391  0.0001 *
+# K92 - K95   0.4436 0.0844 24   5.257  0.0001 *
+```
+
+# MAOM Total Carbon
+```{r}
+# Fit the model
+MAOM_TC_model <- lm(MAOM_TC ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+MAOM_TC_results<- anova(MAOM_TC_model)
+
+# Display the ANOVA results
+print(MAOM_TC_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(MAOM_TC_model)
+qqnorm(residuals(MAOM_TC_model))
+plotNormalHistogram(residuals(MAOM_TC_model))
+shapiro.test(residuals(MAOM_TC_model))
+# W = 0.9337, p-value = 0.04971
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Untransformed data worked best
+
+# ------------------------------------
+# MAOM TC ANOVA
+# ------------------------------------
+anova(MAOM_TC_model)
+#Response: MAOM_TC
+#                Df  Sum Sq Mean Sq F value    Pr(>F)    
+#Treatment        1 0.87450 0.87450 29.6641 1.348e-05 ***
+#Field            3 0.02146 0.00715  0.2426   0.86571    
+#Treatment:Field  3 0.34418 0.11473  3.8917   0.02128 *  
+#Residuals       24 0.70752 0.02948 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+MAOM_TC_Treatment_PH <- emmeans(MAOM_TC_model, ~ Treatment | Field)
+pairwise_contrasts_MAOM_TC <- contrast(MAOM_TC_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_MAOM_TC)
+plot(MAOM_TC_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.0125 0.121 24  -0.103  0.9189
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.5750 0.121 24  -4.736  0.0001 *
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.4325 0.121 24  -3.562  0.0016 *
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.3025 0.121 24  -2.492  0.0200 *
+
+MAOM_TC_Field_PH <- emmeans(MAOM_TC_model, ~ Field | Treatment)
+pairwise_contrasts_MAOM_TC <- contrast(MAOM_TC_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_TC)
+plot(POM_TC_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74    0.247 0.121 24   2.039  0.2022
+# K31 - K92    0.247 0.121 24   2.039  0.2022
+# K31 - K95    0.133 0.121 24   1.091  0.6981
+# K74 - K92    0.000 0.121 24   0.000  1.0000
+# K74 - K95   -0.115 0.121 24  -0.947  0.7799
+# K92 - K95   -0.115 0.121 24  -0.947  0.7799
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   -0.315 0.121 24  -2.595  0.0705
+# K31 - K92   -0.172 0.121 24  -1.421  0.4991
+# K31 - K95   -0.158 0.121 24  -1.297  0.5735
+# K74 - K92    0.142 0.121 24   1.174  0.6487
+# K74 - K95    0.158 0.121 24   1.297  0.5735
+# K92 - K95    0.015 0.121 24   0.124  0.9993
+```
+
+# POM Total Nitrogen
+```{r}
+# Fit the model
+POM_TN_model <- lm(POM_TN ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+POM_TN_results <- anova(POM_TN_model)
+
+# Display the ANOVA results
+print(POM_TN_results) # Treatment:Field is significant ! Use this model
+
+# Check residuals of the lm model
+plot(POM_TN_model)
+qqnorm(residuals(POM_TN_model))
+plotNormalHistogram(residuals(POM_TN_model))
+shapiro.test(residuals(POM_TN_model))
+# W = 0.95162, p-value = 0.1602
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Untransformed data worked best
+
+# ------------------------------------
+# POM TN ANOVA
+# ------------------------------------
+anova(POM_TN_model)
+#Response: POM_TN
+#                Df    Sum Sq   Mean Sq F value    Pr(>F)    
+#Treatment        1 0.0035070 0.0035070 37.5963 2.468e-06 ***
+#Field            3 0.0020433 0.0006811  7.3017 0.0012081 ** 
+#Treatment:Field  3 0.0028941 0.0009647 10.3418 0.0001476 ***
+#Residuals       24 0.0022387 0.0000933      
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+POM_TN_Treatment_PH <- emmeans(POM_TN_model, ~ Treatment | Field)
+pairwise_contrasts_POM_TN <- contrast(POM_TN_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_POM_TN)
+plot(POM_TN_Treatment_PH)
+
+#Field = K31:
+# contrast estimate      SE df t.ratio p.value
+# CN - WC    0.0000 0.00683 24   0.000  1.0000
+
+#Field = K74:
+# contrast estimate      SE df t.ratio p.value
+# CN - WC   -0.0318 0.00683 24  -4.649  0.0001 *
+
+#Field = K92:
+# contrast estimate      SE df t.ratio p.value
+# CN - WC   -0.0465 0.00683 24  -6.809  <.0001 *
+
+#Field = K95:
+# contrast estimate      SE df t.ratio p.value
+# CN - WC   -0.0055 0.00683 24  -0.805  0.4285
+
+POM_TN_Field_PH <- emmeans(POM_TN_lm, ~ Field | Treatment)
+pairwise_contrasts_POM_TN <- contrast(POM_TN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_TN)
+plot(POM_TN_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate      SE df t.ratio p.value
+# K31 - K74  0.00525 0.00683 24   0.769  0.8677
+# K31 - K92  0.01550 0.00683 24   2.270  0.1336
+# K31 - K95  0.01275 0.00683 24   1.867  0.2684
+# K74 - K92  0.01025 0.00683 24   1.501  0.4526
+# K74 - K95  0.00750 0.00683 24   1.098  0.6940
+# K92 - K95 -0.00275 0.00683 24  -0.403  0.9774
+
+#Treatment = WC:
+# contrast  estimate      SE df t.ratio p.value
+# K31 - K74 -0.02650 0.00683 24  -3.880  0.0037 *
+# K31 - K92 -0.03100 0.00683 24  -4.539  0.0007 *
+# K31 - K95  0.00725 0.00683 24   1.062  0.7155
+# K74 - K92 -0.00450 0.00683 24  -0.659  0.9114
+# K74 - K95  0.03375 0.00683 24   4.942  0.0003 *
+# K92 - K95  0.03825 0.00683 24   5.601  0.0001 *
+```
+
+# MAOM Total Nitrogen
+```{r}
+# Fit the model with main effects and interaction
+MAOM_TN_model <- lm(MAOM_TN ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+MAOM_TN_results <- anova(MAOM_TN_model)
+
+# Display the ANOVA results
+print(MAOM_TN_results) # Year_of_WOR:Treatment not significant !
+
+# Check residuals of the lm model
+plot(MAOM_TN_model)
+qqnorm(residuals(MAOM_TN_model))
+plotNormalHistogram(residuals(MAOM_TN_model))
+shapiro.test(residuals(MAOM_TN_model))
+# W = 0.9355, p-value = 0.05585
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Untransformed data worked best
+
+# ------------------------------------
+# MAOM TN ANOVA
+# ------------------------------------
+anova(MAOM_TN_model)
+#Response: MAOM_TN
+#                Df    Sum Sq   Mean Sq F value    Pr(>F)    
+#Treatment        1 0.0056445 0.0056445 18.9992 0.0002121 ***
+#Field            3 0.0007186 0.0002395  0.8062 0.5027667    
+#Treatment:Field  3 0.0019651 0.0006550  2.2048 0.1136139    
+#Residuals       24 0.0071302 0.0002971  
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+MAOM_TN_Treatment_PH <- emmeans(MAOM_TN_model, ~ Treatment | Field)
+pairwise_contrasts_MAOM_TN <- contrast(MAOM_TN_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_MAOM_TN)
+plot(MAOM_TN_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0025 0.0122 24  -0.205  0.8392
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0437 0.0122 24  -3.590  0.0015 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0365 0.0122 24  -2.995  0.0063 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0235 0.0122 24  -1.928  0.0658
+
+MAOM_TN_Field_PH <- emmeans(MAOM_TN_model, ~ Field | Treatment)
+pairwise_contrasts_MAOM_TN <- contrast(MAOM_TN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_TN)
+plot(MAOM_TN_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  0.02400 0.0122 24   1.969  0.2274
+# K31 - K92  0.01400 0.0122 24   1.149  0.6638
+# K31 - K95  0.00100 0.0122 24   0.082  0.9998
+# K74 - K92 -0.01000 0.0122 24  -0.820  0.8442
+# K74 - K95 -0.02300 0.0122 24  -1.887  0.2599
+# K92 - K95 -0.01300 0.0122 24  -1.067  0.7126
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74 -0.01725 0.0122 24  -1.415  0.5024
+# K31 - K92 -0.02000 0.0122 24  -1.641  0.3758
+# K31 - K95 -0.02000 0.0122 24  -1.641  0.3758
+# K74 - K92 -0.00275 0.0122 24  -0.226  0.9958
+# K74 - K95 -0.00275 0.0122 24  -0.226  0.9958
+# K92 - K95  0.00000 0.0122 24   0.000  1.0000
+```
+
+# POM C:N Ratio
+```{r}
+# Fit the model
+POM_CN_model <- lm(POM_CN_Ratio ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+POM_CN_results <- anova(POM_CN_model)
+
+# Display the ANOVA results
+print(POM_CN_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(POM_CN_model)
+qqnorm(residuals(POM_CN_model))
+plotNormalHistogram(residuals(POM_CN_model))
+shapiro.test(residuals(POM_CN_model))
+# W = 0.93156, p-value = 0.04836
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Untransformed data worked best
+
+# ------------------------------------
+# POM C:N Ratio ANOVA
+# ------------------------------------
+anova(POM_CN_model)
+#Response: POM_CN_Ratio
+#                Df Sum Sq Mean Sq F value    Pr(>F)    
+#Treatment        1 22.942 22.9415 16.1093 0.0005438 ***
+#Field            3 63.832 21.2774 14.9408 1.301e-05 ***
+#Treatment:Field  3 32.257 10.7522  7.5501 0.0010898 ** 
+#Residuals       23 32.755  1.4241
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+POM_CN_Treatment_PH <- emmeans(POM_CN_model, ~ Treatment | Field)
+pairwise_contrasts_POM_CN <- contrast(POM_CN_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_POM_CN)
+plot(POM_CN_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC      1.29 0.844 23   1.525  0.1410
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     -1.56 0.844 23  -1.844  0.0781
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     -4.38 0.911 23  -4.807  0.0001 *
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     -2.72 0.844 23  -3.221  0.0038 *
+
+POM_CN_Field_PH <- emmeans(POM_CN_model, ~ Field | Treatment)
+pairwise_contrasts_POM_CN <- contrast(POM_CN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_CN)
+plot(POM_CN_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74    0.146 0.844 23   0.174  0.9981
+# K31 - K92    3.994 0.911 23   4.383  0.0012 *
+# K31 - K95    4.600 0.844 23   5.451  0.0001 *
+# K74 - K92    3.848 0.911 23   4.222  0.0017 *
+# K74 - K95    4.453 0.844 23   5.277  0.0001 *
+# K92 - K95    0.605 0.911 23   0.664  0.9095
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   -2.696 0.844 23  -3.195  0.0196 *
+# K31 - K92   -1.673 0.844 23  -1.983  0.2234
+# K31 - K95    0.595 0.844 23   0.705  0.8939
+# K74 - K92    1.023 0.844 23   1.212  0.6257
+# K74 - K95    3.291 0.844 23   3.900  0.0037 *
+# K92 - K95    2.268 0.844 23   2.688  0.0590
+```
+
+# MAOM C:N Ratio
+```{r}
+# Fit the model
+MAOM_CN_model <- lm(MAOM_CN_Ratio ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+MAOM_CN_results <- anova(MAOM_CN_model)
+
+# Display the ANOVA results
+print(MAOM_CN_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(MAOM_CN_model)
+qqnorm(residuals(MAOM_CN_model))
+plotNormalHistogram(residuals(MAOM_CN_model))
+shapiro.test(residuals(MAOM_CN_model))
+# W = 0.97476, p-value = 0.6396
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Log10 transformation worked best
+SFT_meta$log10_MAOM_CN_Ratio <- log10(SFT_meta$MAOM_CN_Ratio)
+log_MAOM_CN_Ratio_lm <- lm(log10_MAOM_CN_Ratio ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(log_MAOM_CN_Ratio_lm))
+# W = 0.97585, p-value = 0.6731
+qqnorm(residuals(log_MAOM_CN_Ratio_lm))
+plotNormalHistogram(residuals(log_MAOM_CN_Ratio_lm))
+
+# ------------------------------------
+# MAOM C:N Ratio ANOVA
+# ------------------------------------
+anova(log_MAOM_CN_Ratio_lm)
+#Response: log10_MAOM_CN_Ratio
+#                Df    Sum Sq   Mean Sq F value   Pr(>F)    
+#Treatment        1 0.0210919 0.0210919 43.5219    8e-07 ***
+#Field            3 0.0153628 0.0051209 10.5668 0.000128 ***
+#Treatment:Field  3 0.0095699 0.0031900  6.5823 0.002103 ** 
+#Residuals       24 0.0116310 0.0004846   
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+MAOM_CN_Treatment_PH <- emmeans(log_MAOM_CN_Ratio_lm, ~ Treatment | Field)
+pairwise_contrasts_MAOM_CN <- contrast(MAOM_CN_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_MAOM_CN)
+plot(MAOM_CN_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   0.00411 0.0156 24   0.264  0.7941
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC  -0.08864 0.0156 24  -5.695  <.0001 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC  -0.06919 0.0156 24  -4.445  0.0002 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC  -0.05166 0.0156 24  -3.319  0.0029 *
+
+MAOM_CN_Field_PH <- emmeans(log_MAOM_CN_Ratio_lm, ~ Field | Treatment)
+pairwise_contrasts_MAOM_CN <- contrast(MAOM_CN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_CN)
+plot(MAOM_CN_Field_PH)
+
+#Treatment = CN:
+# contrast   estimate     SE df t.ratio p.value
+# K31 - K74  0.031092 0.0156 24   1.997  0.2169
+# K31 - K92  0.073059 0.0156 24   4.693  0.0005 *
+# K31 - K95  0.060998 0.0156 24   3.919  0.0034 *
+# K74 - K92  0.041967 0.0156 24   2.696  0.0571
+# K74 - K95  0.029906 0.0156 24   1.921  0.2460
+# K92 - K95 -0.012061 0.0156 24  -0.775  0.8650
+
+#Treatment = WC:
+# contrast   estimate     SE df t.ratio p.value
+# K31 - K74 -0.061662 0.0156 24  -3.961  0.0030 *
+# K31 - K92 -0.000241 0.0156 24  -0.015  1.0000
+# K31 - K95  0.005230 0.0156 24   0.336  0.9866
+# K74 - K92  0.061421 0.0156 24   3.946  0.0032 *
+# K74 - K95  0.066892 0.0156 24   4.297  0.0013 *
+# K92 - K95  0.005470 0.0156 24   0.351  0.9847
+```
+
+# Dissolved Organic Carbon
+```{r}
+# Fit the model
+DOC_model <- lm(DOC ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+DOC_results <- anova(DOC_model)
+
+# Display the ANOVA results
+print(DOC_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(DOC_model)
+qqnorm(residuals(DOC_model))
+plotNormalHistogram(residuals(DOC_model))
+shapiro.test(residuals(DOC_model))
+# W = 0.97896, p-value = 0.7687
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Log10 transformation worked best
+SFT_meta$log10_DOC <- log10(SFT_meta$DOC)
+log_DOC_lm <- lm(log10_DOC ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(log_DOC_lm)) # looks best, and highest p-value
+# W = 0.98914, p-value = 0.9824
+qqnorm(residuals(log_DOC_lm))
+plotNormalHistogram(residuals(log_DOC_lm))
+
+# ------------------------------------
+# DOC ANOVA
+# ------------------------------------
+anova(log_DOC_lm)
+#Response: log10_DOC
+#                Df   Sum Sq  Mean Sq F value    Pr(>F)    
+#Treatment        1 0.269606 0.269606 39.5312 1.688e-06 ***
+#Field            3 0.214058 0.071353 10.4621 0.0001367 ***
+#Treatment:Field  3 0.087367 0.029122  4.2701 0.0149795 *  
+#Residuals       24 0.163682 0.006820 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+DOC_Treatment_PH <- emmeans(log_DOC_lm, ~ Treatment | Field)
+pairwise_contrasts_DOC <- contrast(DOC_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_DOC)
+plot(DOC_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0921 0.0584 24  -1.577  0.1280
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.3020 0.0584 24  -5.171  <.0001 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.2724 0.0584 24  -4.665  0.0001 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0678 0.0584 24  -1.162  0.2568
+
+DOC_Field_PH <- emmeans(log_DOC_lm, ~ Field | Treatment)
+pairwise_contrasts_DOC <- contrast(DOC_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_DOC)
+plot(DOC_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.1012 0.0584 24  -1.733  0.3294
+# K31 - K92  -0.0693 0.0584 24  -1.187  0.6409
+# K31 - K95  -0.0668 0.0584 24  -1.144  0.6668
+# K74 - K92   0.0319 0.0584 24   0.546  0.9466
+# K74 - K95   0.0344 0.0584 24   0.589  0.9344
+# K92 - K95   0.0025 0.0584 24   0.043  1.0000
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.3111 0.0584 24  -5.328  0.0001 *
+# K31 - K92  -0.2496 0.0584 24  -4.275  0.0014 *
+# K31 - K95  -0.0426 0.0584 24  -0.729  0.8846
+# K74 - K92   0.0615 0.0584 24   1.053  0.7207
+# K74 - K95   0.2686 0.0584 24   4.599  0.0006 *
+# K92 - K95   0.2071 0.0584 24   3.546  0.0083 *
+```
+
+# Dissolved Organic Nitrogen
+```{r}
+# Fit the model
+DON_model <- lm(DON ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+DON_results <- anova(DON_model)
+
+# Display the ANOVA results
+print(DON_results) # Year_of_WOR:Treatment is not significant !
+
+# Check residuals of the lm model
+plot(DON_model)
+qqnorm(residuals(DON_model))
+plotNormalHistogram(residuals(DON_model))
+shapiro.test(residuals(DON_model))
+# W = 0.69518, p-value = 7.37e-07
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Cube-root transformation worked best
+SFT_meta$cbrt_DON <- SFT_meta$DON^(1/3)
+cbrt_DON_lm <- lm(cbrt_DON ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(cbrt_DON_lm)) # looks best, and highest p-value
+# W = 0.93148, p-value = 0.04306
+qqnorm(residuals(cbrt_DON_lm))
+plotNormalHistogram(residuals(cbrt_DON_lm))
+
+# ------------------------------------
+# DON ANOVA
+# ------------------------------------
+anova(cbrt_DON_lm)
+#Response: cbrt_DON
+#                Df  Sum Sq  Mean Sq F value  Pr(>F)  
+#Treatment        1 0.04954 0.049545  0.9001 0.35222  
+#Field            3 0.58137 0.193788  3.5205 0.03029 *
+#Treatment:Field  3 0.17901 0.059669  1.0840 0.37475  
+#Residuals       24 1.32111 0.055046 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+DON_Treatment_PH <- emmeans(cbrt_DON_lm, ~ Treatment | Field)
+pairwise_contrasts_DON <- contrast(DON_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_DON)
+plot(DON_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC  -0.07181 0.166 24  -0.433  0.6690
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC  -0.32130 0.166 24  -1.937  0.0646
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   0.00162 0.166 24   0.010  0.9923
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   0.07670 0.166 24   0.462  0.6480
+
+DON_Field_PH <- emmeans(cbrt_DON_lm, ~ Field | Treatment)
+pairwise_contrasts_DON <- contrast(DON_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_DON)
+plot(DON_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74  -0.0609 0.166 24  -0.367  0.9827
+# K31 - K92  -0.4078 0.166 24  -2.458  0.0929
+# K31 - K95  -0.1885 0.166 24  -1.136  0.6713
+# K74 - K92  -0.3469 0.166 24  -2.091  0.1847
+# K74 - K95  -0.1276 0.166 24  -0.769  0.8676
+# K92 - K95   0.2193 0.166 24   1.322  0.5585
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74  -0.3104 0.166 24  -1.871  0.2666
+# K31 - K92  -0.3344 0.166 24  -2.016  0.2103
+# K31 - K95  -0.0400 0.166 24  -0.241  0.9949
+# K74 - K92  -0.0240 0.166 24  -0.144  0.9989
+# K74 - K95   0.2704 0.166 24   1.630  0.3815
+# K92 - K95   0.2944 0.166 24   1.774  0.3096
+```
+
+# Water Holding Capacity
+```{r}
+# Fit the model
+WHC_model <- lm(WHC ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+WHC_results <- anova(WHC_model)
+
+# Display the ANOVA results
+print(WHC_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(WHC_model)
+qqnorm(residuals(WHC_model))
+plotNormalHistogram(residuals(WHC_model))
+shapiro.test(residuals(WHC_model))
+# W = 0.96427, p-value = 0.3578
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Square-root transformation worked best
+SFT_meta$sqrt_WHC <- sqrt(SFT_meta$WHC)
+sqrt_WHC_lm <- lm(sqrt_WHC ~ Treatment * Field , data = SFT_meta)
+shapiro.test(residuals(sqrt_WHC_lm))  # looks best, and highest p-value
+# W = 0.95396, p-value = 0.1866
+qqnorm(residuals(sqrt_WHC_lm))
+plotNormalHistogram(residuals(sqrt_WHC_lm))
+
+# ------------------------------------
+# WHC ANOVA
+# ------------------------------------
+anova(sqrt_WHC_lm)
+#Response: sqrt_WHC
+#                Df Sum Sq Mean Sq F value    Pr(>F)    
+#Treatment        1 0.8751 0.87505  10.653  0.003289 ** 
+#Field            3 8.5956 2.86520  34.880 6.519e-09 ***
+#Treatment:Field  3 1.4273 0.47578   5.792  0.003980 ** 
+#Residuals       24 1.9715 0.08214
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+WHC_Treatment_PH <- emmeans(sqrt_WHC_lm, ~ Treatment | Field)
+pairwise_contrasts_WHC <- contrast(WHC_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_WHC)
+plot(WHC_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    0.1269 0.203 24   0.626  0.5372
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.6725 0.203 24  -3.318  0.0029 *
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.8250 0.203 24  -4.071  0.0004 *
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    0.0477 0.203 24   0.235  0.8161
+
+WHC_Field_PH <- emmeans(sqrt_WHC_lm, ~ Field | Treatment)
+pairwise_contrasts_WHC <- contrast(WHC_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_WHC)
+plot(WHC_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   0.8750 0.203 24   4.318  0.0013 *
+# K31 - K92   0.7113 0.203 24   3.510  0.0091 *
+# K31 - K95   1.4087 0.203 24   6.951  <.0001 *
+# K74 - K92  -0.1638 0.203 24  -0.808  0.8500 
+# K74 - K95   0.5337 0.203 24   2.634  0.0651 
+# K92 - K95   0.6975 0.203 24   3.442  0.0107 *
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   0.0757 0.203 24   0.373  0.9818 
+# K31 - K92  -0.2406 0.203 24  -1.187  0.6405
+# K31 - K95   1.3295 0.203 24   6.560  <.0001 *
+# K74 - K92  -0.3163 0.203 24  -1.561  0.4190
+# K74 - K95   1.2539 0.203 24   6.187  <.0001 *
+# K92 - K95   1.5701 0.203 24   7.747  <.0001 *
+```
+
+# pH
+```{r}
+# Fit the model
+pH_model <- lm(pH ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+pH_results <- anova(pH_model)
+
+# Display the ANOVA results
+print(pH_results) # Year_of_WOR:Treatment is not significant !
+
+# Check residuals of the lm model
+plot(pH_model)
+qqnorm(residuals(pH_model))
+plotNormalHistogram(residuals(pH_model))
+shapiro.test(residuals(pH_model))
+# W = 0.98693, p-value = 0.9576
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Log10 transformation worked best
+SFT_meta$log10_pH <- log10(SFT_meta$pH)
+log_pH_lm <- lm(log10_pH ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(log_pH_lm))  # looks best, and highest p-value
+# W = 0.99204, p-value = 0.997
+qqnorm(residuals(log_pH_lm))
+plotNormalHistogram(residuals(log_pH_lm))
+
+# ------------------------------------
+# pH ANOVA
+# ------------------------------------
+anova(log_pH_lm)
+#Response: log10_pH
+#                Df   Sum Sq   Mean Sq F value    Pr(>F)    
+#Treatment        1 0.000009 0.0000092  0.0428    0.8378    
+#Field            3 0.034925 0.0116416 54.1096 7.887e-11 ***
+#Treatment:Field  3 0.000224 0.0000747  0.3470    0.7916    
+#Residuals       24 0.005164 0.0002151 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+pH_Treatment_PH <- emmeans(log_pH_lm, ~ Treatment | Field)
+pairwise_contrasts_pH <- contrast(pH_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_pH)
+plot(pH_Treatment_PH)
+
+#Field = K31:
+# contrast  estimate     SE df t.ratio p.value
+# CN - WC  -0.001332 0.0104 24  -0.128  0.8989
+
+#Field = K74:
+# contrast  estimate     SE df t.ratio p.value
+# CN - WC   0.006298 0.0104 24   0.607  0.5494
+
+#Field = K92:
+# contrast  estimate     SE df t.ratio p.value
+# CN - WC  -0.000613 0.0104 24  -0.059  0.9534
+
+#Field = K95:
+# contrast  estimate     SE df t.ratio p.value
+# CN - WC  -0.008647 0.0104 24  -0.834  0.4127
+
+pH_Field_PH <- emmeans(log_pH_lm, ~ Field | Treatment)
+pairwise_contrasts_pH <- contrast(pH_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_pH)
+plot(pH_Field_PH)
+
+#Treatment = CN:
+# contrast   estimate     SE df t.ratio p.value
+# K31 - K74 -0.006882 0.0104 24  -0.664  0.9097
+# K31 - K92  0.074313 0.0104 24   7.165  <.0001 *
+# K31 - K95  0.001982 0.0104 24   0.191  0.9975
+# K74 - K92  0.081195 0.0104 24   7.828  <.0001 *
+# K74 - K95  0.008864 0.0104 24   0.855  0.8278
+# K92 - K95 -0.072330 0.0104 24  -6.974  <.0001 *
+
+#Treatment = WC:
+# contrast   estimate     SE df t.ratio p.value
+# K31 - K74  0.000748 0.0104 24   0.072  0.9999
+# K31 - K92  0.075032 0.0104 24   7.234  <.0001 *
+# K31 - K95 -0.005333 0.0104 24  -0.514  0.9549
+# K74 - K92  0.074284 0.0104 24   7.162  <.0001 *
+# K74 - K95 -0.006081 0.0104 24  -0.586  0.9352
+# K92 - K95 -0.080365 0.0104 24  -7.748  <.0001 *
+```
+
+# CO2 Respiration Rate (incubated with natural abundance 16O-water)
+# Note: This was the control for incubations with 18O-water
+```{r}
+# Fit the model
+CO2_model <- lm(X16O_Respiration_Rate ~ Treatment * Field, data = SFT_meta)
+
+# Perform the ANOVA
+CO2_results <- anova(CO2_model)
+
+# Display the ANOVA results
+print(CO2_results) # Year_of_WOR:Treatment is not significant !
+
+# Check residuals of the lm model
+plot(CO2_model)
+qqnorm(residuals(CO2_model))
+plotNormalHistogram(residuals(CO2_model))
+shapiro.test(residuals(CO2_model))
+# W = 0.97836, p-value = 0.7507
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Square-root transformation worked best
+SFT_meta$sqrt_X16O_Respiration_Rate <- sqrt(SFT_meta$X16O_Respiration_Rate)
+sqrt_X16O_Respiration_Rate_lm <- lm(sqrt_X16O_Respiration_Rate ~ Treatment * Field , data = SFT_meta)
+shapiro.test(residuals(sqrt_X16O_Respiration_Rate_lm)) # looks best, and highest p-value
+# W = 0.98552, p-value = 0.9346
+qqnorm(residuals(sqrt_X16O_Respiration_Rate_lm))
+plotNormalHistogram(residuals(sqrt_X16O_Respiration_Rate_lm))
+
+# ------------------------------------
+# CO2 Respiration Rate (16O-water) ANOVA
+# ------------------------------------
+anova(sqrt_X16O_Respiration_Rate_lm)
+#Response: sqrt_X16O_Respiration_Rate
+#                Df  Sum Sq Mean Sq F value    Pr(>F)    
+#Treatment        1   5.879   5.879  3.1492   0.08865 .  
+#Field            3 103.597  34.532 18.4994 1.961e-06 ***
+#Treatment:Field  3   1.603   0.534  0.2863   0.83481    
+#Residuals       24  44.800   1.867 
+
+# ----------------------
+# POST-HOC PAIRWISE COMPARISONS
+# ----------------------
+# Compare treatments within each field
+X16O_Treatment_PH <- emmeans(sqrt_X16O_Respiration_Rate_lm, ~ Treatment | Field)
+pairwise_contrasts_X16O <- contrast(X16O_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_X16O)
+plot(X16O_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     1.570 0.966 24   1.625  0.1172
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     0.905 0.966 24   0.936  0.3584
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     0.509 0.966 24   0.527  0.6030
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC     0.445 0.966 24   0.461  0.6492
+
+X16O_Field_PH <- emmeans(sqrt_X16O_Respiration_Rate_lm, ~ Field | Treatment)
+pairwise_contrasts_X16O <- contrast(X16O_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_X16O)
+plot(X16O_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74    -1.38 0.966 24  -1.427  0.4954
+# K31 - K92     2.05 0.966 24   2.123  0.1746
+# K31 - K95     3.71 0.966 24   3.837  0.0041 *
+# K74 - K92     3.43 0.966 24   3.550  0.0083 *
+# K74 - K95     5.09 0.966 24   5.265  0.0001 *
+# K92 - K95     1.66 0.966 24   1.715  0.3382
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74    -2.04 0.966 24  -2.116  0.1766
+# K31 - K92     0.99 0.966 24   1.024  0.7370
+# K31 - K95     2.58 0.966 24   2.673  0.0599
+# K74 - K92     3.03 0.966 24   3.141  0.0215 *
+# K74 - K95     4.63 0.966 24   4.789  0.0004 *
+# K92 - K95     1.59 0.966 24   1.648  0.3719
+```
+
+## Helix 2026 Indices, Revised for Wood (aromatic hydrocarbon) Amendment
+# Spectral Index Values Decomposition (1) and Recalcitrance (2) Index Values
+
+# Index 1 (Aliphatic : Aromatic) and 2 (Aromatic : Carboxylic),
+In accordance with the wavenumber corresponding to the 13 organic bands described in Margenot et al 2015: https://acsess.onlinelibrary.wiley.com/doi/10.2136/sssaj2015.02.0070
+
+Index 1 = (2931 + 2871) / (1660 + 1600 + 1540 + 1510)
+# ( Aliphatic : Aromatic )
+
+Index 2 = (1660 + 1600 + 1540 + 1510) / (1724 + 1320 + 1275)
+# ( Aromatic : Carboxylic )
+
+# Note:
+Sample POM 4 (K92_B5_CN) needs to be removed before the following model fitting can be performed. Essentially, the spectral subtraction for this sample yielded negative peaks, and the resulting Index values are sometimes "Inf", NA, or 0.000. This samples is clearly an outlier, and is impeding ANOVA due to the following error:
+
+anova_model_main <- lm(POM_Decomposition_Index ~ Field + Treatment, data = SFT_meta)
+Error in lm.fit(x, y, offset = offset, singular.ok = singular.ok, ...) : 
+  NA/NaN/Inf in 'y'
+
+Due to the structure of the data table (Sample ID as rows, with POM and MAOM values as columns), the simplest solution is to create a copy of the metadata, with the problematic POM sample removed:
+```{r}
+# Create a filtered dataset only for POM analysis
+SFT_meta_POM <- SFT_meta %>%
+  filter(Sample != "K92_B5_CN")  # exclude bad sample
+```
+
+# POM Index 1 (Decomposition) Helix (outliers filtered)
+# (Aliphatic : Aromatic) Index
+```{r}
+# POM Decomposition
+# ------------------------------------
+# Outlier removal (IQR) for POM Decomposition Index
+# ------------------------------------
+remove_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  x[x < (Q1 - 1.5 * IQR) | x > (Q3 + 1.5 * IQR)] <- NA
+  return(x)
+}
+SFT_meta_POM$POM_Decomposition_Index_filtered <- remove_outliers(SFT_meta_POM$POM_Decomposition_Index)
+
+# Fit the model
+POM_1_model <- lm(POM_Decomposition_Index_filtered ~ Treatment * Field, data = SFT_meta_POM)
+POM_1_results <- anova(POM_1_model)
+print(POM_1_results) # Year_of_WOR:Treatment is significant!
+
+# Residual diagnostics
+plot(POM_1_model)
+qqnorm(residuals(POM_1_model))
+plotNormalHistogram(residuals(POM_1_model))
+shapiro.test(residuals(POM_1_model))
+# W = 0.95636, p-value = 0.2666
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Cube-root transformation worked best
+SFT_meta_POM$cbrt_POM_Decomposition_Index <- SFT_meta_POM$POM_Decomposition_Index_filtered^(1/3)
+cbrt_POM_Decomposition_Index_lm <- lm(cbrt_POM_Decomposition_Index ~ Treatment * Field, data = SFT_meta_POM)
+shapiro.test(residuals(cbrt_POM_Decomposition_Index_lm))
+# W = 0.98392, p-value = 0.9246
+qqnorm(residuals(cbrt_POM_Decomposition_Index_lm))
+plotNormalHistogram(residuals(cbrt_POM_Decomposition_Index_lm))
+
+# ------------------------------------
+# POM index 1 ANOVA (Aliphatic : Aromatic)
+# ------------------------------------
+anova(cbrt_POM_Decomposition_Index_lm)
+#Response: cbrt_POM_Decomposition_Index
+#                Df  Sum Sq  Mean Sq F value    Pr(>F)    
+#Treatment        1 0.01886 0.018864  1.0552 0.3160013    
+#Field            3 0.60464 0.201548 11.2741 0.0001285 ***
+#Treatment:Field  3 0.18632 0.062107  3.4741 0.0342667 *  
+#Residuals       21 0.37542 0.017877                      
+
+POM_Decomposition_Index_Treatment_PH <- emmeans(cbrt_POM_Decomposition_Index_lm, ~ Treatment | Field)
+pairwise_contrasts_POM_Decomposition_Index <- contrast(POM_Decomposition_Index_Treatment_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_Decomposition_Index)
+plot(POM_Decomposition_Index_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC  -0.02968 0.0945 21  -0.314  0.7567
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   0.19905 0.1020 21   1.949  0.0648
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC  -0.29868 0.1160 21  -2.579  0.0175 *
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC  -0.00678 0.0945 21  -0.072  0.9435
+
+# Extract significant post-hoc contrasts – Treatment within Field
+pom_decomp_treatment_sig <- as.data.frame(summary(pairwise_contrasts_POM_Decomposition_Index)) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "POM_Decomposition_Index")
+
+POM_Decomposition_Index_Field_PH <- emmeans(cbrt_POM_Decomposition_Index_lm, ~ Field | Treatment)
+pairwise_contrasts_POM_Decomposition_Index <- contrast(POM_Decomposition_Index_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_Decomposition_Index)
+plot(POM_Decomposition_Index_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.4484 0.1020 21  -4.391  0.0014 **
+# K31 - K92  -0.1222 0.1160 21  -1.055  0.7194
+# K31 - K95  -0.0540 0.0945 21  -0.571  0.9397
+# K74 - K92   0.3262 0.1220 21   2.672  0.0632
+# K74 - K95   0.3945 0.1020 21   3.863  0.0046 **
+# K92 - K95   0.0683 0.1160 21   0.590  0.9341
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.2197 0.0945 21  -2.324  0.1245
+# K31 - K92  -0.3912 0.0945 21  -4.138  0.0024 *
+# K31 - K95  -0.0311 0.0945 21  -0.328  0.9874
+# K74 - K92  -0.1715 0.0945 21  -1.814  0.2947
+# K74 - K95   0.1886 0.0945 21   1.995  0.2214
+# K92 - K95   0.3602 0.0945 21   3.809  0.0052 *
+
+# Extract significant post-hoc contrasts – Field within Treatment
+pom_decomp_field_sig <- as.data.frame(summary(contrast(POM_Decomposition_Index_Field_PH, method = "pairwise"))) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "POM_Decomposition_Index")
+```
+
+# POM Index 2 (Recalcitrance) Helix (outliers filtered)
+# ( Aromatic : Carboxylic ) Index
+```{r}
+# POM Recalcitrance
+# ------------------------------------
+# Outlier removal (IQR) for POM Recalcitrance Index
+# ------------------------------------
+remove_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  x[x < (Q1 - 1.5 * IQR) | x > (Q3 + 1.5 * IQR)] <- NA
+  return(x)
+}
+SFT_meta_POM$POM_Recalcitrance_Index_filtered <- remove_outliers(SFT_meta_POM$POM_Recalcitrance_Index)
+
+# Fit the model
+POM_2_model <- lm(POM_Recalcitrance_Index_filtered ~ Treatment * Field, data = SFT_meta_POM)
+POM_2_results <- anova(POM_2_model)
+print(POM_2_results)
+
+# Residual diagnostics
+plot(POM_2_model)
+qqnorm(residuals(POM_2_model))
+plotNormalHistogram(residuals(POM_2_model))
+shapiro.test(residuals(POM_2_model))
+# W = 0.98353, p-value = 0.9174
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Untransformned data worked best
+
+# ------------------------------------
+# POM index 2 ANOVA ( Aromatic : Carboxylic )
+# ------------------------------------
+anova(POM_2_model)
+
+#Response: POM_Recalcitrance_Index_filtered
+#                Df Sum Sq Mean Sq F value  Pr(>F)  
+#Treatment        1 0.1210 0.12098  0.6779 0.41957  
+#Field            3 1.1185 0.37283  2.0891 0.13222  
+#Treatment:Field  3 1.4518 0.48393  2.7117 0.07089 .
+#Residuals       21 3.7477 0.17846 
+
+POM_Recalcitrance_Index_Treatment_PH <- emmeans(POM_2_model, ~ Treatment | Field)
+pairwise_contrasts_POM_Recalcitrance_Index <- contrast(POM_Recalcitrance_Index_Treatment_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_Recalcitrance_Index)
+plot(POM_Recalcitrance_Index_Treatment_PH)
+
+#Field = K31:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    0.0232 0.323 21   0.072  0.9435
+
+#Field = K74:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    0.3208 0.299 21   1.074  0.2951
+
+#Field = K92:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC   -0.9736 0.366 21  -2.661  0.0146
+
+#Field = K95:
+# contrast estimate    SE df t.ratio p.value
+# CN - WC    0.0766 0.299 21   0.256  0.8001
+
+# Extract significant post-hoc contrasts – Treatment within Field
+pom_recal_treatment_sig <- as.data.frame(summary(pairwise_contrasts_POM_Recalcitrance_Index)) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "POM_Recalcitrance_Index")
+
+POM_Recalcitrance_Index_Field_PH <- emmeans(POM_2_model, ~ Field | Treatment)
+pairwise_contrasts_POM_Recalcitrance_Index <- contrast(POM_Recalcitrance_Index_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_POM_Recalcitrance_Index)
+plot(POM_Recalcitrance_Index_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74  -0.2104 0.299 21  -0.704  0.8942
+# K31 - K92   0.1007 0.366 21   0.275  0.9925
+# K31 - K95  -0.1723 0.299 21  -0.577  0.9379
+# K74 - K92   0.3111 0.366 21   0.850  0.8298
+# K74 - K95   0.0381 0.299 21   0.128  0.9992
+# K92 - K95  -0.2730 0.366 21  -0.746  0.8772
+
+#Treatment = WC:
+# contrast  estimate    SE df t.ratio p.value
+# K31 - K74   0.0872 0.323 21   0.270  0.9929
+# K31 - K92  -0.8960 0.323 21  -2.777  0.0511
+# K31 - K95  -0.1188 0.323 21  -0.368  0.9825
+# K74 - K92  -0.9832 0.299 21  -3.292  0.0169
+# K74 - K95  -0.2061 0.299 21  -0.690  0.8998
+# K92 - K95   0.7772 0.299 21   2.602  0.0729
+
+# Extract significant post-hoc contrasts – Field within Treatment
+pom_recal_field_sig <- as.data.frame(summary(contrast(POM_Recalcitrance_Index_Field_PH, method = "pairwise"))) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "POM_Recalcitrance_Index")
+```
+
+# MAOM Index 1 (Decomposition) Helix (outliers filtered)
+# (Aliphatic : Aromatic) Index
+```{r}
+# MAOM Decomposition
+# ------------------------------------
+# Outlier removal (IQR) for MAOM Decomposition Index
+# ------------------------------------
+remove_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  x[x < (Q1 - 1.5 * IQR) | x > (Q3 + 1.5 * IQR)] <- NA
+  return(x)
+}
+SFT_meta$MAOM_Decomposition_Index_filtered <- remove_outliers(SFT_meta$MAOM_Decomposition_Index)
+
+# Fit the model
+MAOM_1_model <- lm(MAOM_Decomposition_Index_filtered ~ Treatment * Field, data = SFT_meta)
+MAOM_1_results <- anova(MAOM_1_model)
+print(MAOM_1_results) # Year_of_WOR:Treatment is significant!
+
+# Check residuals of the lm model
+plot(MAOM_1_model)
+qqnorm(residuals(MAOM_1_model))
+plotNormalHistogram(residuals(MAOM_1_model))
+shapiro.test(residuals(MAOM_1_model))
+# W = 0.96283, p-value = 0.406
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# the untransformed data worked best
+
+# ------------------------------------
+# MAOM index 1 ANOVA (Aliphatic : Aromatic)
+# ------------------------------------
+anova(MAOM_1_model)
+#                Df   Sum Sq  Mean Sq F value    Pr(>F)    
+#Treatment        1 0.000488 0.000488  0.1024 0.7522752    
+#Field            3 0.013967 0.004656  0.9767 0.4234304    
+#Treatment:Field  3 0.156198 0.052066 10.9224 0.0001832 ***
+#Residuals       20 0.095338 0.004767
+
+MAOM_Decomposition_Index_Treatment_PH <- emmeans(MAOM_1_model, ~ Treatment | Field)
+pairwise_contrasts_MAOM_Decomposition_Index <- contrast(MAOM_Decomposition_Index_Treatment_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_Decomposition_Index)
+plot(MAOM_Decomposition_Index_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.1068 0.0527 20   2.025  0.0564
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.2651 0.0564 20  -4.702  0.0001 *
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0443 0.0527 20  -0.840  0.4108
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.1189 0.0488 20   2.436  0.0243 *
+
+# Extract significant post-hoc contrasts – Treatment within Field
+maom_decomp_treatment_sig <- as.data.frame(summary(pairwise_contrasts_MAOM_Decomposition_Index)) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "MAOM_Decomposition_Index")
+
+MAOM_Decomposition_Index_Field_PH <- emmeans(MAOM_1_model, ~ Field | Treatment)
+pairwise_contrasts_MAOM_Decomposition_Index <- contrast(MAOM_Decomposition_Index_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_Decomposition_Index)
+plot(MAOM_Decomposition_Index_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74   0.1158 0.0527 20   2.195  0.1587
+# K31 - K92   0.0595 0.0527 20   1.128  0.6771
+# K31 - K95  -0.0398 0.0488 20  -0.815  0.8468
+# K74 - K92  -0.0563 0.0564 20  -0.998  0.7520
+# K74 - K95  -0.1555 0.0527 20  -2.950  0.0366 *
+# K92 - K95  -0.0992 0.0527 20  -1.882  0.2669
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  -0.2561 0.0564 20  -4.543  0.0010 *
+# K31 - K92  -0.0916 0.0527 20  -1.738  0.3315
+# K31 - K95  -0.0276 0.0527 20  -0.524  0.9522
+# K74 - K92   0.1645 0.0527 20   3.119  0.0256
+# K74 - K95   0.2285 0.0527 20   4.332  0.0017 *
+# K92 - K95   0.0640 0.0488 20   1.310  0.5672
+
+# Extract significant post-hoc contrasts – Field within Treatment
+maom_decomp_field_sig <- as.data.frame(summary(contrast(MAOM_Decomposition_Index_Field_PH, method = "pairwise"))) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "MAOM_Decomposition_Index")
+```
+
+# MAOM Index 2 (Recalcitrance) Helix (outliers filtered)
+# ( Aromatic : Carboxylic ) Index
+```{r}
+# MAOM Recalcitrance
+# ------------------------------------
+# Outlier removal (IQR) for MAOM Recalcitrance Index
+# ------------------------------------
+remove_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  x[x < (Q1 - 1.5 * IQR) | x > (Q3 + 1.5 * IQR)] <- NA
+  return(x)
+}
+SFT_meta$MAOM_Recalcitrance_Index_filtered <- remove_outliers(SFT_meta$MAOM_Recalcitrance_Index)
+
+# Fit the model
+MAOM_2_model <- lm(MAOM_Recalcitrance_Index_filtered ~ Field * Treatment, data = SFT_meta)
+MAOM_2_results <- anova(MAOM_2_model)
+print(MAOM_2_results)
+
+# Check residuals of the lm model
+plot(MAOM_2_model)
+qqnorm(residuals(MAOM_2_model))
+plotNormalHistogram(residuals(MAOM_2_model))
+shapiro.test(residuals(MAOM_2_model))
+# W = 0.98297, p-value = 0.8889
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Square-root transformation worked best
+SFT_meta$sqrt_MAOM_Recalcitrance_Index <- sqrt(SFT_meta$MAOM_Recalcitrance_Index_filtered)
+sqrt_MAOM_Recalcitrance_Index_lm <- lm(sqrt_MAOM_Recalcitrance_Index ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(sqrt_MAOM_Recalcitrance_Index_lm))
+# W = 0.98405, p-value = 0.9127
+qqnorm(residuals(sqrt_MAOM_Recalcitrance_Index_lm))
+plotNormalHistogram(residuals(sqrt_MAOM_Recalcitrance_Index_lm))
+
+# ------------------------------------
+# MAOM index 2 ANOVA ( Aromatic : Carboxylic )
+# ------------------------------------
+anova(sqrt_MAOM_Recalcitrance_Index_lm)
+#Response: sqrt_MAOM_Recalcitrance_Index
+#                Df   Sum Sq   Mean Sq F value   Pr(>F)   
+#Treatment        1 0.006591 0.0065915  1.8840 0.183117   
+#Field            3 0.064110 0.0213701  6.1081 0.003265 **
+#Treatment:Field  3 0.021227 0.0070756  2.0224 0.138799   
+#Residuals       23 0.080469 0.0034986
+
+MAOM_Recalcitrance_Index_Treatment_PH <- emmeans(sqrt_MAOM_Recalcitrance_Index_lm, ~ Treatment | Field)
+pairwise_contrasts_MAOM_Recalcitrance_Index <- contrast(MAOM_Recalcitrance_Index_Treatment_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_Recalcitrance_Index)
+plot(MAOM_Recalcitrance_Index_Treatment_PH)
+
+#Field = K31:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0915 0.0418 23  -2.188  0.0391 *
+
+#Field = K74:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0137 0.0452 23  -0.303  0.7647
+
+#Field = K92:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC   -0.0589 0.0418 23  -1.408  0.1726
+
+#Field = K95:
+# contrast estimate     SE df t.ratio p.value
+# CN - WC    0.0460 0.0418 23   1.099  0.2832
+
+# Treatment within Field (facet: "MAOM_Decomposition_Index")
+maom_recal_treatment_sig <- as.data.frame(summary(pairwise_contrasts_MAOM_Recalcitrance_Index)) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "MAOM_Recalcitrance_Index")
+
+MAOM_Recalcitrance_Index_Field_PH <- emmeans(sqrt_MAOM_Recalcitrance_Index_lm, ~ Field | Treatment)
+pairwise_contrasts_MAOM_Recalcitrance_Index <- contrast(MAOM_Recalcitrance_Index_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_MAOM_Recalcitrance_Index)
+plot(MAOM_Recalcitrance_Index_Field_PH)
+
+#Treatment = CN:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74 -0.00858 0.0452 23  -0.190  0.9975
+# K31 - K92 -0.05842 0.0418 23  -1.397  0.5139
+# K31 - K95  0.01189 0.0418 23   0.284  0.9918
+# K74 - K92 -0.04984 0.0452 23  -1.103  0.6912
+# K74 - K95  0.02048 0.0452 23   0.453  0.9683
+# K92 - K95  0.07032 0.0418 23   1.681  0.3559
+
+#Treatment = WC:
+# contrast  estimate     SE df t.ratio p.value
+# K31 - K74  0.06923 0.0418 23   1.655  0.3691
+# K31 - K92 -0.02580 0.0418 23  -0.617  0.9257
+# K31 - K95  0.14935 0.0418 23   3.571  0.0082 *
+# K74 - K92 -0.09503 0.0418 23  -2.272  0.1341
+# K74 - K95  0.08011 0.0418 23   1.915  0.2494
+# K92 - K95  0.17515 0.0418 23   4.188  0.0019 *
+
+# Field within Treatment
+maom_recal_field_sig <- as.data.frame(summary(contrast(MAOM_Recalcitrance_Index_Field_PH, method = "pairwise"))) %>%
+  filter(p.value < 0.05) %>%
+  mutate(Parameter = "MAOM_Recalcitrance_Index")
+```
+
+# Combine Significant Post-hoc tests (for plotting)
+# Note: The significant post-hoc results were annotated onto the figures (from SFT_Chem) using Affinity (photo editing software).
+```{r}
+all_treatment_sig <- bind_rows(
+  maom_decomp_treatment_sig,
+  maom_recal_treatment_sig,
+  pom_decomp_treatment_sig,
+  pom_recal_treatment_sig
+)
+
+all_field_sig <- bind_rows(
+  maom_decomp_field_sig,
+  maom_recal_field_sig,
+  pom_decomp_field_sig,
+  pom_recal_field_sig
+)
+```
