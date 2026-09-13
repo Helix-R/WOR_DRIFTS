@@ -60,8 +60,8 @@ The SFT_meta dataframe includes is for 32 soil samples (4 fields * 2 treatments 
 - Water Holding Capacity (%)
 - 18O Resipiration Rate (mg CO2 / 24 hrs)
 - 16O Respiration Rate (mg Co2 / 24 hrs)
-- Dissolved Organic Carbon (mg C / g soil ODW)
-- Dissolved Organic Nitrogen (mg N / g soil ODW)
+- Extractable Organic Carbon (mg C / g soil ODW)
+- Extractable Organic Nitrogen (mg N / g soil ODW)
 - Microbial Biomass Carbon (mg MBC / g ODW)
 - Microbial Biomass Nitrogen (mg MBN / g ODW)
 - Total C [of the <2 mm soil] (%)
@@ -734,11 +734,11 @@ anova(MAOM_TN_model)
 # POST-HOC PAIRWISE COMPARISONS
 # ----------------------
 # Compare treatments within each field
-MAOM_TN_Treatment_PH <- emmeans(MAOM_TN_model, ~ Treatment | Field)
-pairwise_contrasts_MAOM_TN <- contrast(MAOM_TN_Treatment_PH, method = "pairwise")
+#MAOM_TN_Treatment_PH <- emmeans(MAOM_TN_model, ~ Treatment | Field)
+#pairwise_contrasts_MAOM_TN <- contrast(MAOM_TN_Treatment_PH, method = "pairwise")
 
-summary(pairwise_contrasts_MAOM_TN)
-plot(MAOM_TN_Treatment_PH)
+#summary(pairwise_contrasts_MAOM_TN)
+#plot(MAOM_TN_Treatment_PH)
 
 #Field = K31:
 # contrast estimate     SE df t.ratio p.value
@@ -755,29 +755,6 @@ plot(MAOM_TN_Treatment_PH)
 #Field = K95:
 # contrast estimate     SE df t.ratio p.value
 # CN - WC   -0.0235 0.0122 24  -1.928  0.0658
-
-MAOM_TN_Field_PH <- emmeans(MAOM_TN_model, ~ Field | Treatment)
-pairwise_contrasts_MAOM_TN <- contrast(MAOM_TN_Field_PH, method = "pairwise")
-summary(pairwise_contrasts_MAOM_TN)
-plot(MAOM_TN_Field_PH)
-
-#Treatment = CN:
-# contrast  estimate     SE df t.ratio p.value
-# K31 - K74  0.02400 0.0122 24   1.969  0.2274
-# K31 - K92  0.01400 0.0122 24   1.149  0.6638
-# K31 - K95  0.00100 0.0122 24   0.082  0.9998
-# K74 - K92 -0.01000 0.0122 24  -0.820  0.8442
-# K74 - K95 -0.02300 0.0122 24  -1.887  0.2599
-# K92 - K95 -0.01300 0.0122 24  -1.067  0.7126
-
-#Treatment = WC:
-# contrast  estimate     SE df t.ratio p.value
-# K31 - K74 -0.01725 0.0122 24  -1.415  0.5024
-# K31 - K92 -0.02000 0.0122 24  -1.641  0.3758
-# K31 - K95 -0.02000 0.0122 24  -1.641  0.3758
-# K74 - K92 -0.00275 0.0122 24  -0.226  0.9958
-# K74 - K95 -0.00275 0.0122 24  -0.226  0.9958
-# K92 - K95  0.00000 0.0122 24   0.000  1.0000
 ```
 
 # POM C:N Ratio
@@ -956,41 +933,11 @@ plot(MAOM_CN_Field_PH)
 # K92 - K95  0.005470 0.0156 24   0.351  0.9847
 ```
 
-# Dissolved Organic Carbon
+# Extractable Organic Carbon
 ```{r}
 # Fit the model
-DOC_model <- lm(DOC ~ Treatment * Field, data = SFT_meta)
 
-# Perform the ANOVA
-DOC_results <- anova(DOC_model)
-
-# Display the ANOVA results
-print(DOC_results) # Year_of_WOR:Treatment is significant !
-
-# Check residuals of the lm model
-plot(DOC_model)
-qqnorm(residuals(DOC_model))
-plotNormalHistogram(residuals(DOC_model))
-shapiro.test(residuals(DOC_model))
-# W = 0.97896, p-value = 0.7687
-
-# ----------------------------
-# TRANSFORMATIONS
-# ----------------------------
-# Tested Log10, Square-root, Inverse, Cube-root transformations
-# Log10 transformation worked best
-SFT_meta$log10_DOC <- log10(SFT_meta$DOC)
-log_DOC_lm <- lm(log10_DOC ~ Treatment * Field, data = SFT_meta)
-shapiro.test(residuals(log_DOC_lm)) # looks best, and highest p-value
-# W = 0.98914, p-value = 0.9824
-qqnorm(residuals(log_DOC_lm))
-plotNormalHistogram(residuals(log_DOC_lm))
-
-# ------------------------------------
-# DOC ANOVA
-# ------------------------------------
-anova(log_DOC_lm)
-#Response: log10_DOC
+#Response: log10_EOC
 #                Df   Sum Sq  Mean Sq F value    Pr(>F)    
 #Treatment        1 0.269606 0.269606 39.5312 1.688e-06 ***
 #Field            3 0.214058 0.071353 10.4621 0.0001367 ***
@@ -1001,11 +948,41 @@ anova(log_DOC_lm)
 # POST-HOC PAIRWISE COMPARISONS
 # ----------------------
 # Compare treatments within each field
-DOC_Treatment_PH <- emmeans(log_DOC_lm, ~ Treatment | Field)
-pairwise_contrasts_DOC <- contrast(DOC_Treatment_PH, method = "pairwise")
+EOC_Treatment_PH <- emmeans(log_EOC_lm, ~ Treatment | Field)
+pairwise_contrasts_EOC <- contrEOC_model <- lm(EOC ~ Treatment * Field, data = SFT_meta)
 
-summary(pairwise_contrasts_DOC)
-plot(DOC_Treatment_PH)
+# Perform the ANOVA
+EOC_results <- anova(EOC_model)
+
+# Display the ANOVA results
+print(EOC_results) # Year_of_WOR:Treatment is significant !
+
+# Check residuals of the lm model
+plot(EOC_model)
+qqnorm(residuals(EOC_model))
+plotNormalHistogram(residuals(EOC_model))
+shapiro.test(residuals(EOC_model))
+# W = 0.97896, p-value = 0.7687
+
+# ----------------------------
+# TRANSFORMATIONS
+# ----------------------------
+# Tested Log10, Square-root, Inverse, Cube-root transformations
+# Log10 transformation worked best
+SFT_meta$log10_EOC <- log10(SFT_meta$EOC)
+log_EOC_lm <- lm(log10_EOC ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(log_EOC_lm)) # looks best, and highest p-value
+# W = 0.98914, p-value = 0.9824
+qqnorm(residuals(log_EOC_lm))
+plotNormalHistogram(residuals(log_EOC_lm))
+
+# ------------------------------------
+# EOC ANOVA
+# ------------------------------------
+anova(log_EOC_lm)ast(EOC_Treatment_PH, method = "pairwise")
+
+summary(pairwise_contrasts_EOC)
+plot(EOC_Treatment_PH)
 
 #Field = K31:
 # contrast estimate     SE df t.ratio p.value
@@ -1023,10 +1000,10 @@ plot(DOC_Treatment_PH)
 # contrast estimate     SE df t.ratio p.value
 # CN - WC   -0.0678 0.0584 24  -1.162  0.2568
 
-DOC_Field_PH <- emmeans(log_DOC_lm, ~ Field | Treatment)
-pairwise_contrasts_DOC <- contrast(DOC_Field_PH, method = "pairwise")
-summary(pairwise_contrasts_DOC)
-plot(DOC_Field_PH)
+EOC_Field_PH <- emmeans(log_EOC_lm, ~ Field | Treatment)
+pairwise_contrasts_EOC <- contrast(EOC_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_EOC)
+plot(EOC_Field_PH)
 
 #Treatment = CN:
 # contrast  estimate     SE df t.ratio p.value
@@ -1047,22 +1024,22 @@ plot(DOC_Field_PH)
 # K92 - K95   0.2071 0.0584 24   3.546  0.0083 *
 ```
 
-# Dissolved Organic Nitrogen
+# Extractable Organic Nitrogen
 ```{r}
 # Fit the model
-DON_model <- lm(DON ~ Treatment * Field, data = SFT_meta)
+ExtN_model <- lm(ExtN ~ Treatment * Field, data = SFT_meta)
 
 # Perform the ANOVA
-DON_results <- anova(DON_model)
+ExtN_results <- anova(ExtN_model)
 
 # Display the ANOVA results
-print(DON_results) # Year_of_WOR:Treatment is not significant !
+print(ExtN_results) # Year_of_WOR:Treatment is not significant !
 
 # Check residuals of the lm model
-plot(DON_model)
-qqnorm(residuals(DON_model))
-plotNormalHistogram(residuals(DON_model))
-shapiro.test(residuals(DON_model))
+plot(ExtN_model)
+qqnorm(residuals(ExtN_model))
+plotNormalHistogram(residuals(ExtN_model))
+shapiro.test(residuals(ExtN_model))
 # W = 0.69518, p-value = 7.37e-07
 
 # ----------------------------
@@ -1070,18 +1047,18 @@ shapiro.test(residuals(DON_model))
 # ----------------------------
 # Tested Log10, Square-root, Inverse, Cube-root transformations
 # Cube-root transformation worked best
-SFT_meta$cbrt_DON <- SFT_meta$DON^(1/3)
-cbrt_DON_lm <- lm(cbrt_DON ~ Treatment * Field, data = SFT_meta)
-shapiro.test(residuals(cbrt_DON_lm)) # looks best, and highest p-value
+SFT_meta$cbrt_ExtN <- SFT_meta$ExtN^(1/3)
+cbrt_ExtN_lm <- lm(cbrt_ExtN ~ Treatment * Field, data = SFT_meta)
+shapiro.test(residuals(cbrt_ExtN_lm)) # looks best, and highest p-value
 # W = 0.93148, p-value = 0.04306
-qqnorm(residuals(cbrt_DON_lm))
-plotNormalHistogram(residuals(cbrt_DON_lm))
+qqnorm(residuals(cbrt_ExtN_lm))
+plotNormalHistogram(residuals(cbrt_ExtN_lm))
 
 # ------------------------------------
-# DON ANOVA
+# ExtN ANOVA
 # ------------------------------------
-anova(cbrt_DON_lm)
-#Response: cbrt_DON
+anova(cbrt_ExtN_lm)
+#Response: cbrt_ExtN
 #                Df  Sum Sq  Mean Sq F value  Pr(>F)  
 #Treatment        1 0.04954 0.049545  0.9001 0.35222  
 #Field            3 0.58137 0.193788  3.5205 0.03029 *
@@ -1092,11 +1069,11 @@ anova(cbrt_DON_lm)
 # POST-HOC PAIRWISE COMPARISONS
 # ----------------------
 # Compare treatments within each field
-DON_Treatment_PH <- emmeans(cbrt_DON_lm, ~ Treatment | Field)
-pairwise_contrasts_DON <- contrast(DON_Treatment_PH, method = "pairwise")
+ExtN_Treatment_PH <- emmeans(cbrt_ExtN_lm, ~ Treatment | Field)
+pairwise_contrasts_ExtN <- contrast(ExtN_Treatment_PH, method = "pairwise")
 
-summary(pairwise_contrasts_DON)
-plot(DON_Treatment_PH)
+summary(pairwise_contrasts_ExtN)
+plot(ExtN_Treatment_PH)
 
 #Field = K31:
 # contrast estimate    SE df t.ratio p.value
@@ -1114,10 +1091,10 @@ plot(DON_Treatment_PH)
 # contrast estimate    SE df t.ratio p.value
 # CN - WC   0.07670 0.166 24   0.462  0.6480
 
-DON_Field_PH <- emmeans(cbrt_DON_lm, ~ Field | Treatment)
-pairwise_contrasts_DON <- contrast(DON_Field_PH, method = "pairwise")
-summary(pairwise_contrasts_DON)
-plot(DON_Field_PH)
+ExtN_Field_PH <- emmeans(cbrt_ExtN_lm, ~ Field | Treatment)
+pairwise_contrasts_ExtN <- contrast(ExtN_Field_PH, method = "pairwise")
+summary(pairwise_contrasts_ExtN)
+plot(ExtN_Field_PH)
 
 #Treatment = CN:
 # contrast  estimate    SE df t.ratio p.value

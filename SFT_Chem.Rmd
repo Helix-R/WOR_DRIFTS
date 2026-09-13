@@ -50,8 +50,8 @@ The SFT_meta dataframe includes is for 32 soil samples (4 fields * 2 treatments 
 - Water Holding Capacity (%)
 - 18O Resipiration Rate (mg CO2 / 24 hrs)
 - 16O Respiration Rate (mg Co2 / 24 hrs)
-- Dissolved Organic Carbon (mg C / g soil ODW)
-- Dissolved Organic Nitrogen (mg N / g soil ODW)
+- Extractable Organic Carbon (mg C / g soil ODW)
+- Extractable Nitrogen (mg N / g soil ODW)
 - Microbial Biomass Carbon (mg MBC / g ODW)
 - Microbial Biomass Nitrogen (mg MBN / g ODW)
 - Total C [of the <2 mm soil] (%)
@@ -91,17 +91,17 @@ ggplot(SFT_meta, aes(x = Sample, y = WHC)) +
   xlab("Sample") +
   ylab("Water Holding Capacity (%))")
 
-# Boxplot for DOC
-ggplot(SFT_meta, aes(x = Sample, y = DOC)) +
+# Boxplot for EOC
+ggplot(SFT_meta, aes(x = Sample, y = EOC)) +
   geom_boxplot() +
   xlab("Sample") +
-  ylab("Dissolved Organic Carbon (mg C / g soil ODW)")
+  ylab("Extractable Organic Carbon (mg C / g soil ODW)")
 
-# Boxplot for DON
-ggplot(SFT_meta, aes(x = Sample, y = DON)) +
+# Boxplot for ExtN
+ggplot(SFT_meta, aes(x = Sample, y = ExtN)) +
   geom_boxplot() +
   xlab("Sample") +
-  ylab("Dissolved Organic Nitrogen (mg N / g soil ODW)")
+  ylab("Extractable Nitrogen (mg N / g soil ODW)")
 
 # Boxplot for MBC
 ggplot(SFT_meta, aes(x = Sample, y = MBC)) +
@@ -909,7 +909,6 @@ print(p15)
 dev.off()
 ```
 
-
 ## Plotting the OM Content, TC, POM_TC, and MAOM_TC (%)
 ```{r, echo=FALSE}
 #library(rstatix)
@@ -974,7 +973,7 @@ print(SOM_TC_bxplt)
 dev.off()
 ```
 
-## Plotting the DOC and MBC (mg C / g ODW)
+## Plotting the EOC and MBC (mg C / g ODW)
 ```{r, echo=FALSE}
 #library(rstatix)
 #library(ggplot2)
@@ -983,16 +982,16 @@ dev.off()
 #library(dplyr)
 
 # Select the columns you want to include
-OC_columns <- c("DOC", "MBC")
+OC_columns <- c("EOC", "MBC")
 
 # Gather the data to reshape it and filter columns
 SFT_OC_meta_long <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, DOC, MBC) %>%
+  select(Sample, Field, Block, Treatment, EOC, MBC) %>%
   gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
 
 # Define custom order for Field and Parameter
 field_order <- c("K95", "K92", "K74", "K31")
-parameter_order <- c("DOC", "MBC")
+parameter_order <- c("EOC", "MBC")
 
 # Convert Field and Parameter to factors with specified levels
 SFT_OC_meta_long$Field <- factor(SFT_OC_meta_long$Field, levels = field_order)
@@ -1009,7 +1008,7 @@ averages <- SFT_OC_meta_long %>%
 averages$Field <- factor(averages$Field, levels = field_order)
 averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
 
-# Create a single boxplot for DOC and MBC values with customized labels
+# Create a single boxplot for EOC and MBC values with customized labels
 OC_bxplt <- ggplot(SFT_OC_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
@@ -1027,7 +1026,7 @@ OC_bxplt <- ggplot(SFT_OC_meta_long, aes(x = Field, y = Value, fill = Treatment)
   ) +
   scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
   scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("DOC" = "Dissolved Organic Carbon", "MBC" = "Microbial Biomass Carbon")))
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("EOC" = "Extractable Organic Carbon", "MBC" = "Microbial Biomass Carbon")))
 
 # Print the combined plot
 print(OC_bxplt)
@@ -1038,7 +1037,7 @@ print(OC_bxplt)
 dev.off()
 ```
 
-## Plotting the DON and MBN (mg N / g ODW)
+## Plotting the ExtN and MBN (mg N / g ODW)
 ```{r, echo=FALSE}
 #library(rstatix)
 #library(ggplot2)
@@ -1047,16 +1046,16 @@ dev.off()
 #library(dplyr)
 
 # Select the columns you want to include
-ON_columns <- c("DON", "MBN")
+ON_columns <- c("ExtN", "MBN")
 
 # Gather the data to reshape it and filter columns
 SFT_ON_meta_long <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, DON, MBN) %>%
+  select(Sample, Field, Block, Treatment, ExtN, MBN) %>%
   gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
 
 # Define custom order for Field and Parameter
 field_order <- c("K95", "K92", "K74", "K31")
-parameter_order <- c("DON", "MBN")
+parameter_order <- c("ExtN", "MBN")
 
 # Convert Field and Parameter to factors with specified levels
 SFT_ON_meta_long$Field <- factor(SFT_ON_meta_long$Field, levels = field_order)
@@ -1073,7 +1072,7 @@ averages <- SFT_ON_meta_long %>%
 averages$Field <- factor(averages$Field, levels = field_order)
 averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
 
-# Create a single boxplot for DON and MBN values with customized labels
+# Create a single boxplot for ExtN and MBN values with customized labels
 ON_bxplt <- ggplot(SFT_ON_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
@@ -1091,7 +1090,7 @@ ON_bxplt <- ggplot(SFT_ON_meta_long, aes(x = Field, y = Value, fill = Treatment)
   ) +
   scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
   scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("DON" = "Dissolved Organic Nitrogen", "MBN" = "Microbial Biomass Nitrogen")))
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("ExtN" = "Extractable Organic Nitrogen", "MBN" = "Microbial Biomass Nitrogen")))
 
 # Print the combined plot
 print(ON_bxplt)
@@ -1300,7 +1299,7 @@ dev.off()
 ```
 
 # Plots that need to be exported separatley
-OM_Content, pH, WHC, DOC, DON, X16O_Respiration (CO2 respiration with natural, 16O-water)
+OM_Content, pH, WHC, EOC, ExtN, X16O_Respiration (CO2 respiration with natural, 16O-water)
 
 # Soil Organic Matter Content
 ```{r}
@@ -1526,29 +1525,39 @@ print(WHC_plot)
 dev.off()
 ```
 
-# Dissolved Organic Carbon
+# Extractable Organic Carbon
 ```{r}
 # Filter data and prepare long format
-DOC_data <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, DOC)
+EOC_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, EOC)
 
-DOC_long <- DOC_data %>%
-  pivot_longer(cols = DOC, names_to = "Parameter", values_to = "Value")
+EOC_long <- EOC_data %>%
+  pivot_longer(cols = EOC, names_to = "Parameter", values_to = "Value")
 
 # Set factor levels for consistent x-axis ordering
-DOC_long$Field <- factor(DOC_long$Field, levels = c("K95", "K92", "K74", "K31"))
+EOC_long$Field <- factor(EOC_long$Field, levels = c("K95", "K92", "K74", "K31"))
 
 # Add custom facet label for strip
-DOC_long$Facet <- "<2mm Soil"
+EOC_long$Facet <- "<2mm Soil"
 
 # Calculate summary statistics per Treatment × Field group
-DOC_avg <- DOC_long %>%
+EOC_avg <- EOC_long %>%
   group_by(Field, Treatment) %>%
   summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
 
 # Create boxplot with mean ± SE
-DOC_plot <- ggplot(DOC_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(0.8), color = "black") +
+EOC_plot <- ggplot(
+  EOC_long,
+  aes(
+    x = Field,
+    y = Value,
+    fill = Treatment
+  )
+) +
+  geom_boxplot(
+    position = position_dodge(width = 0.8),
+    color = "black"
+  ) +
   stat_summary(
     fun.data = mean_se,
     geom = "pointrange",
@@ -1559,69 +1568,131 @@ DOC_plot <- ggplot(DOC_long, aes(x = Field, y = Value, fill = Treatment)) +
     color = "black"
   ) +
   geom_errorbar(
-    data = DOC_avg,
-    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    data = EOC_avg,
+    aes(
+      x = Field,
+      y = Mean,
+      ymin = Mean - SE,
+      ymax = Mean + SE,
+      group = Treatment
+    ),
     position = position_dodge(width = 0.8),
     width = 0.25,
+    color = "black",
     inherit.aes = FALSE
   ) +
-  facet_wrap(~Facet, strip.position = "top") +
+  facet_wrap(
+    ~Facet,
+    strip.position = "top"
+  ) +
   labs(
-    y = "Dissolved Organic Carbon (mg C / g Soil)",
+    y = expression(
+      bold("Extractable Organic Carbon"~(mg~C~g^{-1}~soil))
+    ),
     x = "Years Since WOR"
   ) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  scale_fill_manual(
-    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
-    labels = c("CN" = "Control", "WC" = "WOR")
+  scale_x_discrete(
+    labels = c(
+      "K95" = "3",
+      "K92" = "4",
+      "K74" = "6",
+      "K31" = "15"
+    )
   ) +
-theme_bw(base_size = 12) +  # ensures font size matches TN plot
-theme(
-  panel.background = element_rect(fill = "grey95", color = NA),
-  panel.grid.major = element_line(color = "white"),
-  panel.grid.minor = element_line(color = "white"),
-  strip.background = element_rect(fill = "grey80", color = NA),
-  strip.text = element_text(size = 12),
-  axis.title = element_text(face = "bold", size = 12),
-  axis.text = element_text(size = 12),
-  legend.title = element_text(face = "bold", size = 12),
-  legend.text = element_text(size = 12),
-  legend.position = "none",
-  axis.text.x = element_text(angle = 0, hjust = 0.5)
-)
+  scale_fill_manual(
+    values = c(
+      "CN" = "#1F77B4",
+      "WC" = "#FF7F0E"
+    ),
+    labels = c(
+      "CN" = "Control",
+      "WC" = "WOR"
+    )
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.background = element_rect(
+      fill = "grey95",
+      color = NA
+    ),
+    panel.grid.major = element_line(
+      color = "white"
+    ),
+    panel.grid.minor = element_line(
+      color = "white"
+    ),
+    strip.background = element_rect(
+      fill = "grey80",
+      color = NA
+    ),
+    strip.text = element_text(
+      size = 12
+    ),
+    axis.title = element_text(
+      face = "bold",
+      size = 12
+    ),
+    axis.text = element_text(
+      size = 12
+    ),
+    legend.title = element_text(
+      face = "bold",
+      size = 12
+    ),
+    legend.text = element_text(
+      size = 12
+    ),
+    legend.position = "none",
+    axis.text.x = element_text(
+      angle = 0,
+      hjust = 0.5
+    )
+  )
+
+EOC_plot
 
 # Print
-print(DOC_plot)
+print(EOC_plot)
 
 # To save
-png("DOC_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
-print(DOC_plot)
+png("EOC_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(EOC_plot)
 dev.off()
 ```
 
-# Dissolved Organic Nitrogen
+# Extractable Organic Nitrogen
 ```{r}
 # Filter data and prepare long format
-DON_data <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, DON)
+ExtN_data <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, ExtN)
 
-DON_long <- DON_data %>%
-  pivot_longer(cols = DON, names_to = "Parameter", values_to = "Value")
+ExtN_long <- ExtN_data %>%
+  pivot_longer(cols = ExtN, names_to = "Parameter", values_to = "Value")
 
 # Set factor levels for consistent x-axis ordering
-DON_long$Field <- factor(DON_long$Field, levels = c("K95", "K92", "K74", "K31"))
+ExtN_long$Field <- factor(ExtN_long$Field, levels = c("K95", "K92", "K74", "K31"))
 
 # Add custom facet label for strip
-DON_long$Facet <- "<2mm Soil"
+ExtN_long$Facet <- "<2mm Soil"
 
 # Calculate summary statistics per Treatment × Field group
-DON_avg <- DON_long %>%
+ExtN_avg <- ExtN_long %>%
   group_by(Field, Treatment) %>%
   summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
 
 # Create boxplot with mean ± SE
-DON_plot <- ggplot(DON_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(0.8), color = "black") +
+ExtN_plot <- ggplot(
+  ExtN_long,
+  aes(
+    x = Field,
+    y = Value,
+    fill = Treatment
+  )
+) +
+  geom_boxplot(
+    position = position_dodge(width = 0.8),
+    color = "black"
+  ) +
   stat_summary(
     fun.data = mean_se,
     geom = "pointrange",
@@ -1632,43 +1703,95 @@ DON_plot <- ggplot(DON_long, aes(x = Field, y = Value, fill = Treatment)) +
     color = "black"
   ) +
   geom_errorbar(
-    data = DON_avg,
-    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
+    data = ExtN_avg,
+    aes(
+      x = Field,
+      y = Mean,
+      ymin = Mean - SE,
+      ymax = Mean + SE,
+      group = Treatment
+    ),
     position = position_dodge(width = 0.8),
     width = 0.25,
+    color = "black",
     inherit.aes = FALSE
   ) +
-  facet_wrap(~Facet, strip.position = "top") +
+  facet_wrap(
+    ~Facet,
+    strip.position = "top"
+  ) +
   labs(
-    y = "Dissolved Organic Nitrogen (mg N / g Soil)",
+    y = expression(
+      bold("Extractable Nitrogen"~(mg~N~g^{-1}~soil))
+    ),
     x = "Years Since WOR"
   ) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  scale_fill_manual(
-    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
-    labels = c("CN" = "Control", "WC" = "WOR")
+  scale_x_discrete(
+    labels = c(
+      "K95" = "3",
+      "K92" = "4",
+      "K74" = "6",
+      "K31" = "15"
+    )
   ) +
-theme_bw(base_size = 12) +  # ensures font size matches TN plot
-theme(
-  panel.background = element_rect(fill = "grey95", color = NA),
-  panel.grid.major = element_line(color = "white"),
-  panel.grid.minor = element_line(color = "white"),
-  strip.background = element_rect(fill = "grey80", color = NA),
-  strip.text = element_text(size = 12),
-  axis.title = element_text(face = "bold", size = 12),
-  axis.text = element_text(size = 12),
-  legend.title = element_text(face = "bold", size = 12),
-  legend.text = element_text(size = 12),
-  legend.position = "none",
-  axis.text.x = element_text(angle = 0, hjust = 0.5)
-)
+  scale_fill_manual(
+    values = c(
+      "CN" = "#1F77B4",
+      "WC" = "#FF7F0E"
+    ),
+    labels = c(
+      "CN" = "Control",
+      "WC" = "WOR"
+    )
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.background = element_rect(
+      fill = "grey95",
+      color = NA
+    ),
+    panel.grid.major = element_line(
+      color = "white"
+    ),
+    panel.grid.minor = element_line(
+      color = "white"
+    ),
+    strip.background = element_rect(
+      fill = "grey80",
+      color = NA
+    ),
+    strip.text = element_text(
+      size = 12
+    ),
+    axis.title = element_text(
+      face = "bold",
+      size = 12
+    ),
+    axis.text = element_text(
+      size = 12
+    ),
+    legend.title = element_text(
+      face = "bold",
+      size = 12
+    ),
+    legend.text = element_text(
+      size = 12
+    ),
+    legend.position = "none",
+    axis.text.x = element_text(
+      angle = 0,
+      hjust = 0.5
+    )
+  )
+
+ExtN_plot
 
 # Print
-print(DON_plot)
+print(ExtN_plot)
 
 # To save
-png("DON_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
-print(DON_plot)
+png("ExtN_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
+print(ExtN_plot)
 dev.off()
 ```
 
