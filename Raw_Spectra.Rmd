@@ -14,10 +14,10 @@ knitr::opts_chunk$set(echo = TRUE)
 This space for time substitution experiment was conducted in four experimental almond orchards that have whole orchard recycling (WOR) and control treatments. These 4 fields were each sampled in 4 replicate blocks per treatment in Summer 2023 at the University of California Kearney Agricultural Research and Extension Center (UC KARE) located in Fresno County, CA. The soils were first seived to <2 mm and then separated into POM and MAOM fractions. All POM and MAOM samples were air-dried, diluted to 10% (w/w) with pre-ground potassium bromide (KBr), and then analyzed by DRIFTS spectroscopy. Spectral subtractions were performed in OMNIC, to remove the absorbance of inorganic covalent bonds such as Si-O (which compose the mineral contribution of soil).
 
 Space for Time Substitution Design (Fields + Years):
-Field K32 (est. 2008) 15 yrs  |   33 tons wood chips/acre   | Blocks 2,3,4,6
-Field K74 (est. 2017)  6 yrs  |   85 tons wood chips/acre   | Blocks 11,12,13,14
-Field K92 (est. 2019)  4 yrs  |   61 tons wood chips/acre   | Blocks 1,2,3,5
-Field K95 (est. 2020)  3 yrs  |   60 tons wood chips/acre   | Blocks 1,2,3,4
+Field K32 (est. 2008) 15 yrs  |   67 Mg wood chips per ha   | Blocks 2,3,4,6
+Field K74 (est. 2017)  6 yrs  |   191 Mg wood chips per ha  | Blocks 11,12,13,14
+Field K92 (est. 2019)  4 yrs  |   134 Mg wood chips per ha  | Blocks 1,2,3,5
+Field K95 (est. 2020)  3 yrs  |   110 Mg wood chips per ha  | Blocks 1,2,3,4
 
 POM and MAOM Sample (#) shorthand key:
    [K92]         [K31]        [K74]          [K95]

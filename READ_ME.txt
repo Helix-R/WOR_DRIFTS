@@ -48,15 +48,23 @@ Spectra Data File: SFT_POM_MAOM_sub_KM_ave.rds
 SFT_Chem.rmd:
 This file is for analysis of the soil chemistry data for all values, including Index values.
 Here we have all the metadata for the <2 mm soil and corresponding POM and MAOM fractions. The POM and MAOM samples have TC, TN, and C:N ratio data.
-The <2 mm soil fractions have TC, TN, C:N, SOM, WHC, pH, EOC, Ext-N, MBC, MBN, and CO2 respiration data (incubated with both as 16O and 18O water).
+The <2 mm soil fractions have TC, TN, C:N, EOC, and Ext-N.
+POM and MAOM index values include:
+POM Aliphatic C : Aromatic C (Index value 1)
+POM Aromatic C : Carboxylic C (Index value 2)
+MAOM Aliphatic C : Aromatic C (Index value 1)
+MAOM Aromatic C : Carboxylic C (Index value 2)
 Note 1: This file also contains code for the bleach treated POM and MAOM supplemental figure (as proof that the PX and MX samples were thoroughly bleached, down to near 0% total carbon).
 Note 2: The individual plots of soil chemistry variables were combined and annotated with Affinity (photo editing software).
 Soil (<2 mm), POM, and MAOM Chemistry Data: SFT_2023_Metadata.rds
-Helix Index Values Data: Helix_Index123.rds
 
 SFT_stats.rmd:
 This file is for statistics of all soil chemistry data and index values (<2 mm soil and corresponding POM and MAOM fractions).
-The <2 mm soil fractions have TC, TN, C:N, SOM, WHC, pH, EOC, Ext-N, MBC, MBN, and CO2 respiration data (incubated with both as 16O and 18O water).
+The <2 mm soil fractions have TC, TN, C:N, EOC, and Ext-N.
+POM and MAOM index values include:
+POM Aliphatic C : Aromatic C (Index value 1)
+POM Aromatic C : Carboxylic C (Index value 2)
+MAOM Aliphatic C : Aromatic C (Index value 1)
+MAOM Aromatic C : Carboxylic C (Index value 2)
 Note: The soil chemistry plots were annotated with significant post-hocs using Affinity (photo editing software).
 Soil (<2 mm), POM, and MAOM Chemistry Data: SFT_2023_Metadata.rds
-Helix Index Values Data: Helix_Index123.rds

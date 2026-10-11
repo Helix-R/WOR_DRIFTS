@@ -13,10 +13,10 @@ knitr::opts_chunk$set(echo = TRUE)
 This space for time substitution experiment was conducted in four experimental almond orchards that have whole orchard recycling (WOR) and control treatments. These 4 fields were each sampled in 4 replicate blocks per treatment in Summer 2023 at the University of California Kearney Agricultural Research and Extension Center (UC KARE) located in Fresno County, CA. The soils were first seived to <2 mm and then separated into POM and MAOM fractions. All POM and MAOM samples were air-dried, diluted to 10% (w/w) with pre-ground potassium bromide (KBr), and then analyzed by DRIFTS spectroscopy. Spectral subtractions were performed in OMNIC, to remove the absorbance of inorganic covalent bonds such as Si-O (which compose the mineral contribution of soil).
 
 Space for Time Substitution Design (Fields + Years):
-Field K32 (est. 2008) 15 yrs  |   33 tons wood chips/acre   | Blocks 2,3,4,6
-Field K74 (est. 2017)  6 yrs  |   85 tons wood chips/acre   | Blocks 11,12,13,14
-Field K92 (est. 2019)  4 yrs  |   61 tons wood chips/acre   | Blocks 1,2,3,5
-Field K95 (est. 2020)  3 yrs  |   60 tons wood chips/acre   | Blocks 1,2,3,4
+Field K32 (est. 2008) 15 yrs  |   67 Mg wood chips per ha   | Blocks 2,3,4,6
+Field K74 (est. 2017)  6 yrs  |   191 Mg wood chips per ha  | Blocks 11,12,13,14
+Field K92 (est. 2019)  4 yrs  |   134 Mg wood chips per ha  | Blocks 1,2,3,5
+Field K95 (est. 2020)  3 yrs  |   110 Mg wood chips per ha  | Blocks 1,2,3,4
 
 POM and MAOM Sample (#) shorthand key:
    [K92]         [K31]        [K74]          [K95]
@@ -40,56 +40,40 @@ library(dplyr)
 library(ggtext)
 
 # Load the Metadata and Subtraction Index Values
-SFT_meta <- readRDS(file = "SFT_2023_Metadata.rds")
-SFT_ss_index <- readRDS(file = "Helix_Index123.rds")
+SFT_meta <- readRDS(file = "WOR_SFT_2023_Metadata.rds")
 ```
 The SFT_meta dataframe includes is for 32 soil samples (4 fields * 2 treatments * 4 blocks) that were sieved to <2 mm prior to collection of the following data:
-- Gravimetric Moisture Content (%)
-- Soil pH [20 g of soil + 20 mL of DIW]
-- SOM content by LOI (%)
-- Water Holding Capacity (%)
-- 18O Resipiration Rate (mg CO2 / 24 hrs)
-- 16O Respiration Rate (mg Co2 / 24 hrs)
-- Extractable Organic Carbon (mg C / g soil ODW)
-- Extractable Nitrogen (mg N / g soil ODW)
-- Microbial Biomass Carbon (mg MBC / g ODW)
-- Microbial Biomass Nitrogen (mg MBN / g ODW)
-- Total C [of the <2 mm soil] (%)
-- Total N [of the <2 mm soil] (%)
-- Total C [of the POM fraction] (%)
-- Total N [of the POM fraction] (%)
-- Total C [of the MAOM fraction] (%)
-- Total N [of the MAOM fraction] (%)
-- CN_Ratio (TC % / TN %)
-- POM_CN_Ratio (POM TC % / POM TN %)
-- MAOM_CN_Ratio (MAOM TC % / MAOM TN %)
+
+TC - Total C [of the <2 mm soil] (%)
+TN - Total N [of the <2 mm soil] (%)
+C:N - CN_Ratio (TC % / TN %)
+EOC - Extractable Organic Carbon (mg C / g soil ODW)
+ExtN - Extractable Organic Nitrogen (mg N / g soil ODW)
+POM TC - Total C [of the POM fraction] (%)
+POM TN - Total N [of the POM fraction] (%)
+MAOM TC - Total C [of the MAOM fraction] (%)
+MAOM TN - Total N [of the MAOM fraction] (%)
+POM C:N - POM_CN_Ratio (POM TC % / POM TN %)
+MAOM C:N - MAOM_CN_Ratio (MAOM TC % / MAOM TN %)
+POM Aliphatic C : Aromatic C (Index value 1)
+POM Aromatic C : Carboxylic C (Index value 2)
+MAOM Aliphatic C : Aromatic C (Index value 1)
+MAOM Aromatic C : Carboxylic C (Index value 2)
 
 # SFT_meta Potting
 ## Brief plotting of the variables individually
 ```{r, echo=FALSE}
-# Boxplot for Gravimetric Moisture Content
-ggplot(SFT_meta, aes(x = Sample, y = Moisture_Content)) +
+# Boxplot for TC
+ggplot(SFT_meta, aes(x = Sample, y = TC)) +
   geom_boxplot() +
   xlab("Sample") +
-  ylab("Gravimetric Moisture Content (%)")
+  ylab("Total C (%)")
 
-# Boxplot for Soil pH
-ggplot(SFT_meta, aes(x = Sample, y = pH)) +
+# Boxplot for TN
+ggplot(SFT_meta, aes(x = Sample, y = TN)) +
   geom_boxplot() +
   xlab("Sample") +
-  ylab("Soil pH)")
-
-# Boxplot for SOM
-ggplot(SFT_meta, aes(x = Sample, y = OM_Content)) +
-  geom_boxplot() +
-  xlab("Sample") +
-  ylab("SOM Content (%)")
-
-# Boxplot for WHC
-ggplot(SFT_meta, aes(x = Sample, y = WHC)) +
-  geom_boxplot() +
-  xlab("Sample") +
-  ylab("Water Holding Capacity (%))")
+  ylab("Total N (%)")
 
 # Boxplot for EOC
 ggplot(SFT_meta, aes(x = Sample, y = EOC)) +
@@ -102,30 +86,6 @@ ggplot(SFT_meta, aes(x = Sample, y = ExtN)) +
   geom_boxplot() +
   xlab("Sample") +
   ylab("Extractable Nitrogen (mg N / g soil ODW)")
-
-# Boxplot for MBC
-ggplot(SFT_meta, aes(x = Sample, y = MBC)) +
-  geom_boxplot() +
-  xlab("Sample") +
-  ylab("Microbial Biomass C (mg MBC / g ODW)")
-
-# Boxplot for MBN
-ggplot(SFT_meta, aes(x = Sample, y = MBN)) +
-  geom_boxplot() +
-  xlab("Sample") +
-  ylab("Microbial Biomass N (mg MBC / g ODW)")
-
-# Boxplot for TC
-ggplot(SFT_meta, aes(x = Sample, y = TC)) +
-  geom_boxplot() +
-  xlab("Sample") +
-  ylab("Total C (%)")
-
-# Boxplot for TN
-ggplot(SFT_meta, aes(x = Sample, y = TN)) +
-  geom_boxplot() +
-  xlab("Sample") +
-  ylab("Total N (%)")
 
 # Boxplot for 13C POM
 ggplot(SFT_meta, aes(x = Sample, y = POM_13C)) +
@@ -154,15 +114,10 @@ ggplot(SFT_meta, aes(x = Sample, y = MAOM_15N)) +
 
 # Meta Data Means
 ```{r}
-# Means for Treatments (does not separate by Field)
+# Means for Treatments (Overall average, does not separate by Field)
 meta_means <- SFT_meta %>%
   group_by(Treatment) %>%
   summarize(
-    pH_mean = mean(pH, na.rm = TRUE),
-    pH_sd   = sd(pH, na.rm = TRUE),
-
-    SOM_mean = mean(OM_Content, na.rm = TRUE),
-    SOM_sd = sd(OM_Content, na.rm = TRUE),
     TC_mean = mean(TC, na.rm = TRUE),
     TC_sd = sd(TC, na.rm = TRUE),
     TN_mean = mean(TN, na.rm = TRUE),
@@ -194,38 +149,23 @@ meta_means <- SFT_meta %>%
     MAOM_15N_sd = sd(MAOM_15N, na.rm = TRUE),
 
     # --- Spectral indices ---
-    POM_Decomposition_Index_mean  = mean(POM_Decomposition_Index, na.rm = TRUE),
-    POM_Decomposition_Index_sd    = sd(POM_Decomposition_Index, na.rm = TRUE),
-    MAOM_Decomposition_Index_mean = mean(MAOM_Decomposition_Index, na.rm = TRUE),
-    MAOM_Decomposition_Index_sd   = sd(MAOM_Decomposition_Index, na.rm = TRUE),
+    POM_Aliphatic_Aromatic_mean  = mean(POM_Aliphatic_Aromatic, na.rm = TRUE),
+    POM_Aliphatic_Aromatic_sd    = sd(POM_Aliphatic_Aromatic, na.rm = TRUE),
+    MAOM_Aliphatic_Aromatic_mean = mean(MAOM_Aliphatic_Aromatic, na.rm = TRUE),
+    MAOM_Aliphatic_Aromatic_sd   = sd(MAOM_Aliphatic_Aromatic, na.rm = TRUE),
 
-    POM_Recalcitrance_Index_mean  = mean(POM_Recalcitrance_Index, na.rm = TRUE),
-    POM_Recalcitrance_Index_sd    = sd(POM_Recalcitrance_Index, na.rm = TRUE),
-    MAOM_Recalcitrance_Index_mean = mean(MAOM_Recalcitrance_Index, na.rm = TRUE),
-    MAOM_Recalcitrance_Index_sd   = sd(MAOM_Recalcitrance_Index, na.rm = TRUE)
-  ) %>%
-  rename(
-    "POM Aliphatic C : Aromatic C_mean"  = POM_Decomposition_Index_mean,
-    "POM Aliphatic C : Aromatic C_sd"    = POM_Decomposition_Index_sd,
-    "MAOM Aliphatic C : Aromatic C_mean" = MAOM_Decomposition_Index_mean,
-    "MAOM Aliphatic C : Aromatic C_sd"   = MAOM_Decomposition_Index_sd,
-    "POM Aromatic C : Carboxylic C_mean"  = POM_Recalcitrance_Index_mean,
-    "POM Aromatic C : Carboxylic C_sd"    = POM_Recalcitrance_Index_sd,
-    "MAOM Aromatic C : Carboxylic C_mean" = MAOM_Recalcitrance_Index_mean,
-    "MAOM Aromatic C : Carboxylic C_sd"   = MAOM_Recalcitrance_Index_sd
+    POM_Aromatic_Carboxylic_mean  = mean(POM_Aromatic_Carboxylic, na.rm = TRUE),
+    POM_Aromatic_Carboxylic_sd    = sd(POM_Aromatic_Carboxylic, na.rm = TRUE),
+    MAOM_Aromatic_Carboxylic_mean = mean(MAOM_Aromatic_Carboxylic, na.rm = TRUE),
+    MAOM_Aromatic_Carboxylic_sd   = sd(MAOM_Aromatic_Carboxylic, na.rm = TRUE)
   )
-
 print(meta_means)
 
 # Means for Treatment x Field
 meta_means_field <- SFT_meta %>%
   group_by(Treatment, Field) %>%
   summarize(
-    pH_mean = mean(pH, na.rm = TRUE),
-    pH_sd   = sd(pH, na.rm = TRUE),
-
-    SOM_mean = mean(OM_Content, na.rm = TRUE),
-    SOM_sd = sd(OM_Content, na.rm = TRUE),
+    
     TC_mean = mean(TC, na.rm = TRUE),
     TC_sd = sd(TC, na.rm = TRUE),
     TN_mean = mean(TN, na.rm = TRUE),
@@ -257,27 +197,16 @@ meta_means_field <- SFT_meta %>%
     MAOM_15N_sd = sd(MAOM_15N, na.rm = TRUE),
 
     # --- Spectral indices ---
-    POM_Decomposition_Index_mean  = mean(POM_Decomposition_Index, na.rm = TRUE),
-    POM_Decomposition_Index_sd    = sd(POM_Decomposition_Index, na.rm = TRUE),
-    MAOM_Decomposition_Index_mean = mean(MAOM_Decomposition_Index, na.rm = TRUE),
-    MAOM_Decomposition_Index_sd   = sd(MAOM_Decomposition_Index, na.rm = TRUE),
+    POM_Aliphatic_Aromatic_mean  = mean(POM_Aliphatic_Aromatic, na.rm = TRUE),
+    POM_Aliphatic_Aromatic_sd    = sd(POM_Aliphatic_Aromatic, na.rm = TRUE),
+    MAOM_Aliphatic_Aromatic_mean = mean(MAOM_Aliphatic_Aromatic, na.rm = TRUE),
+    MAOM_Aliphatic_Aromatic_sd   = sd(MAOM_Aliphatic_Aromatic, na.rm = TRUE),
 
-    POM_Recalcitrance_Index_mean  = mean(POM_Recalcitrance_Index, na.rm = TRUE),
-    POM_Recalcitrance_Index_sd    = sd(POM_Recalcitrance_Index, na.rm = TRUE),
-    MAOM_Recalcitrance_Index_mean = mean(MAOM_Recalcitrance_Index, na.rm = TRUE),
-    MAOM_Recalcitrance_Index_sd   = sd(MAOM_Recalcitrance_Index, na.rm = TRUE)
-  ) %>%
-  rename(
-    "POM Aliphatic C : Aromatic C_mean"  = POM_Decomposition_Index_mean,
-    "POM Aliphatic C : Aromatic C_sd"    = POM_Decomposition_Index_sd,
-    "MAOM Aliphatic C : Aromatic C_mean" = MAOM_Decomposition_Index_mean,
-    "MAOM Aliphatic C : Aromatic C_sd"   = MAOM_Decomposition_Index_sd,
-    "POM Aromatic C : Carboxylic C_mean"  = POM_Recalcitrance_Index_mean,
-    "POM Aromatic C : Carboxylic C_sd"    = POM_Recalcitrance_Index_sd,
-    "MAOM Aromatic C : Carboxylic C_mean" = MAOM_Recalcitrance_Index_mean,
-    "MAOM Aromatic C : Carboxylic C_sd"   = MAOM_Recalcitrance_Index_sd
+    POM_Aromatic_Carboxylic_mean  = mean(POM_Aromatic_Carboxylic, na.rm = TRUE),
+    POM_Aromatic_Carboxylic_sd    = sd(POM_Aromatic_Carboxylic, na.rm = TRUE),
+    MAOM_Aromatic_Carboxylic_mean = mean(MAOM_Aromatic_Carboxylic, na.rm = TRUE),
+    MAOM_Aromatic_Carboxylic_sd   = sd(MAOM_Aromatic_Carboxylic, na.rm = TRUE)
   )
-
 print(meta_means_field)
 
 # Export Treatment means
@@ -302,10 +231,8 @@ exclude_cols <- c(
   "POM_TC", "POM_TN", "MAOM_TC", "MAOM_TN",
   "POM_CN_Ratio", "MAOM_CN_Ratio",
   "percent_MAOM", "percent_POM",
-  "MAOM_Index_I", "MAOM_Index_II",
-  "POM_Index_I", "POM_Index_II",
-  "MAOM_Decomposition_Index", "MAOM_Recalcitrance_Index",
-  "POM_Decomposition_Index", "POM_Recalcitrance_Index"
+  "MAOM_Aliphatic_Aromatic", "MAOM_Aromatic_Carboxylic",
+  "POM_Aliphatic_Aromatic", "POM_Aromatic_Carboxylic"
 )
 
 meta_means_field_2mm <- SFT_meta %>%
@@ -636,7 +563,6 @@ print(CNR_scatter)
 dev.off()
 ```
 
-
 ## Plotting 13C and 15 POM and MAOM
 ```{r}
 # Select the columns you want to include
@@ -909,7 +835,7 @@ print(p15)
 dev.off()
 ```
 
-## Plotting the OM Content, TC, POM_TC, and MAOM_TC (%)
+## Plotting the TC, POM_TC, and MAOM_TC (%)
 ```{r, echo=FALSE}
 #library(rstatix)
 #library(ggplot2)
@@ -918,16 +844,16 @@ dev.off()
 #library(dplyr)
 
 # Select the columns you want to include
-TC_columns <- c("OM_Content", "TC", "POM_TC", "MAOM_TC")
+TC_columns <- c("TC", "POM_TC", "MAOM_TC")
 
 # Gather the data to reshape it and filter columns
 SFT_Cmeta_long <- SFT_meta %>%
-  dplyr::select(Sample, Field, Block, Treatment, OM_Content, TC, POM_TC, MAOM_TC) %>%
+  dplyr::select(Sample, Field, Block, Treatment, TC, POM_TC, MAOM_TC) %>%
   gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
 
 # Define custom order for Field and Parameter
 field_order <- c("K95", "K92", "K74", "K31")
-parameter_order <- c("OM_Content", "TC", "POM_TC", "MAOM_TC")
+parameter_order <- c("TC", "POM_TC", "MAOM_TC")
 
 # Convert Field and Parameter to factors with specified levels
 SFT_Cmeta_long$Field <- factor(SFT_Cmeta_long$Field, levels = field_order)
@@ -944,13 +870,13 @@ averages <- SFT_Cmeta_long %>%
 averages$Field <- factor(averages$Field, levels = field_order)
 averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
 
-# Create a single boxplot for SOM and Carbon values with customized labels
-SOM_TC_bxplt <- ggplot(SFT_Cmeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+# Create a single boxplot for Carbon values with customized labels
+All_TC_bxplt <- ggplot(SFT_Cmeta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
   geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
                 position = position_dodge(width = 0.8), width = 0.25) +
-  labs(y = "SOM and Total Carbon (%)", x = "Years Since WOR") +
+  labs(y = "Total Carbon (%)", x = "Years Since WOR") +
   theme_gray() +
   theme(
     axis.title = element_text(face = "bold", size = 12),
@@ -962,18 +888,18 @@ SOM_TC_bxplt <- ggplot(SFT_Cmeta_long, aes(x = Field, y = Value, fill = Treatmen
   ) +
   scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
   scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("OM_Content" = "<2mm SOM", "TC" = "<2 mm Soil TC", "MAOM_TC" = "MAOM TC", "POM_TC" = "POM TC")))
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("TC" = "<2 mm Soil TC", "MAOM_TC" = "MAOM TC", "POM_TC" = "POM TC")))
 
 # Print the combined plot
-print(SOM_TC_bxplt)
+print(All_TC_bxplt)
 
 # To save
-png("SFT_SOM_TC_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
-print(SOM_TC_bxplt)
+png("SFT_All_TC_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+print(All_TC_bxplt)
 dev.off()
 ```
 
-## Plotting the EOC and MBC (mg C / g ODW)
+## Plotting EOC (mg C / g ODW)
 ```{r, echo=FALSE}
 #library(rstatix)
 #library(ggplot2)
@@ -982,23 +908,23 @@ dev.off()
 #library(dplyr)
 
 # Select the columns you want to include
-OC_columns <- c("EOC", "MBC")
+EOC_columns <- c("EOC")
 
 # Gather the data to reshape it and filter columns
-SFT_OC_meta_long <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, EOC, MBC) %>%
+SFT_EOC_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, EOC) %>%
   gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
 
 # Define custom order for Field and Parameter
 field_order <- c("K95", "K92", "K74", "K31")
-parameter_order <- c("EOC", "MBC")
+parameter_order <- c("EOC")
 
 # Convert Field and Parameter to factors with specified levels
-SFT_OC_meta_long$Field <- factor(SFT_OC_meta_long$Field, levels = field_order)
-SFT_OC_meta_long$Parameter <- factor(SFT_OC_meta_long$Parameter, levels = parameter_order)
+SFT_EOC_meta_long$Field <- factor(SFT_EOC_meta_long$Field, levels = field_order)
+SFT_EOC_meta_long$Parameter <- factor(SFT_EOC_meta_long$Parameter, levels = parameter_order)
 
 # Calculate averages for each Block + Treatment combination within each Field
-averages <- SFT_OC_meta_long %>%
+averages <- SFT_EOC_meta_long %>%
   group_by(Field, Treatment, Parameter) %>%
   summarise(Mean = mean(Value),
             SE = sd(Value) / sqrt(n())) %>%
@@ -1009,12 +935,12 @@ averages$Field <- factor(averages$Field, levels = field_order)
 averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
 
 # Create a single boxplot for EOC and MBC values with customized labels
-OC_bxplt <- ggplot(SFT_OC_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+EOC_bxplt <- ggplot(SFT_EOC_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
   geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
                 position = position_dodge(width = 0.8), width = 0.25) +
-  labs(y = "Dissolved Organic & Microbial Biomass Carbon (mg C / g soil ODW)", x = "Years Since WOR") +
+  labs(y = "Extractable Organic Carbon (mg C / g soil ODW)", x = "Years Since WOR") +
   theme_gray() +
   theme(
     axis.title = element_text(face = "bold", size = 12),
@@ -1026,18 +952,18 @@ OC_bxplt <- ggplot(SFT_OC_meta_long, aes(x = Field, y = Value, fill = Treatment)
   ) +
   scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
   scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("EOC" = "Extractable Organic Carbon", "MBC" = "Microbial Biomass Carbon")))
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("EOC" = "Extractable Organic Carbon")))
 
 # Print the combined plot
-print(OC_bxplt)
+print(EOC_bxplt)
 
 # To save
-png("SFT_OC_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
-print(OC_bxplt)
+png("SFT_EOC_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+print(EOC_bxplt)
 dev.off()
 ```
 
-## Plotting the ExtN and MBN (mg N / g ODW)
+## Plotting the ExtN (mg N / g ODW)
 ```{r, echo=FALSE}
 #library(rstatix)
 #library(ggplot2)
@@ -1046,23 +972,23 @@ dev.off()
 #library(dplyr)
 
 # Select the columns you want to include
-ON_columns <- c("ExtN", "MBN")
+ExtN_columns <- c("ExtN")
 
 # Gather the data to reshape it and filter columns
-SFT_ON_meta_long <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, ExtN, MBN) %>%
+SFT_ExtN_meta_long <- SFT_meta %>%
+  select(Sample, Field, Block, Treatment, ExtN) %>%
   gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
 
 # Define custom order for Field and Parameter
 field_order <- c("K95", "K92", "K74", "K31")
-parameter_order <- c("ExtN", "MBN")
+parameter_order <- c("ExtN")
 
 # Convert Field and Parameter to factors with specified levels
-SFT_ON_meta_long$Field <- factor(SFT_ON_meta_long$Field, levels = field_order)
-SFT_ON_meta_long$Parameter <- factor(SFT_ON_meta_long$Parameter, levels = parameter_order)
+SFT_ExtN_meta_long$Field <- factor(SFT_ExtN_meta_long$Field, levels = field_order)
+SFT_ExtN_meta_long$Parameter <- factor(SFT_ExtN_meta_long$Parameter, levels = parameter_order)
 
 # Calculate averages for each Block + Treatment combination within each Field
-averages <- SFT_ON_meta_long %>%
+averages <- SFT_ExtN_meta_long %>%
   group_by(Field, Treatment, Parameter) %>%
   summarise(Mean = mean(Value),
             SE = sd(Value) / sqrt(n())) %>%
@@ -1073,12 +999,12 @@ averages$Field <- factor(averages$Field, levels = field_order)
 averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
 
 # Create a single boxplot for ExtN and MBN values with customized labels
-ON_bxplt <- ggplot(SFT_ON_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+ExtN_bxplt <- ggplot(SFT_ExtN_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
   geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
                 position = position_dodge(width = 0.8), width = 0.25) +
-  labs(y = "Dissolved Organic & Microbial Biomass Nitrogen (mg N / g soil ODW)", x = "Years Since WOR") +
+  labs(y = "Extractable Nitrogen (mg N / g soil ODW)", x = "Years Since WOR") +
   theme_gray() +
   theme(
     axis.title = element_text(face = "bold", size = 12),
@@ -1090,13 +1016,13 @@ ON_bxplt <- ggplot(SFT_ON_meta_long, aes(x = Field, y = Value, fill = Treatment)
   ) +
   scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
   scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("ExtN" = "Extractable Organic Nitrogen", "MBN" = "Microbial Biomass Nitrogen")))
+  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("ExtN" = "Extractable Nitrogen")))
 
 # Print the combined plot
-print(ON_bxplt)
+print(ExtN_bxplt)
 
 # To save
-png("SFT_ON_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
+png("SFT_ExtN_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
 print(ON_bxplt)
 dev.off()
 ```
@@ -1181,11 +1107,11 @@ dev.off()
 #library(dplyr)
 
 # Select the columns you want to include
-fraction_columns <- c("OM_Content", "percent_MAOM", "percent_POM")
+fraction_columns <- c("percent_MAOM", "percent_POM")
 
 # Gather the data to reshape it and filter columns
 SFT_fraction_meta_long <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, OM_Content, percent_MAOM, percent_POM) %>%
+  select(Sample, Field, Block, Treatment, percent_MAOM, percent_POM) %>%
   gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
 
 # Define custom order for Field
@@ -1205,12 +1131,12 @@ averages <- SFT_fraction_meta_long %>%
 averages$Field <- factor(averages$Field, levels = field_order)
 
 # Create a single boxplot for the selected values with customized labels
-wood_fractionation_bxplt <- ggplot(SFT_fraction_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
+fractionation_bxplt <- ggplot(SFT_fraction_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
   geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
                 position = position_dodge(width = 0.8), width = 0.25) +
-  labs(title = "Percent SOM, POM, and MAOM", y = "Percent", x = "Years since WOR") +
+  labs(title = "Percent POM, and MAOM", y = "Percent", x = "Years since WOR") +
   theme_minimal() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
@@ -1225,308 +1151,24 @@ wood_fractionation_bxplt <- ggplot(SFT_fraction_meta_long, aes(x = Field, y = Va
   facet_wrap(~ Parameter, scales = "free_y")
 
 # Print the combined plot
-print(wood_fractionation_bxplt)
+print(fractionation_bxplt)
 
 # Save the plot
-png("wood_fractionation_bxplt_clean.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
-print(wood_fractionation_bxplt)
-dev.off()
-```
-
-## Plotting the WHC, pH, and CO2 respiration rates
-# Note: CO2 respiration was measured from jar incubations of soil, with 16O-water and 18O-water.
-```{r, echo=FALSE}
-#library(rstatix)
-#library(ggplot2)
-#library(ggpubr)
-#library(tidyr)
-#library(dplyr)
-
-# Select the columns you want to include
-X_columns <- c("WHC", "pH", "X16O_Respiration_Rate", "X18O_Respiration_Rate")
-
-# Gather the data to reshape it and filter columns
-SFT_X_meta_long <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, WHC, pH, X16O_Respiration_Rate, X18O_Respiration_Rate) %>%
-  gather(key = "Parameter", value = "Value", -c(Sample, Field, Block, Treatment))
-
-# Define custom order for Field and Parameter
-field_order <- c("K95", "K92", "K74", "K31")
-parameter_order <- c("WHC", "pH", "X16O_Respiration_Rate", "X18O_Respiration_Rate")
-
-# Convert Field and Parameter to factors with specified levels
-SFT_X_meta_long$Field <- factor(SFT_X_meta_long$Field, levels = field_order)
-SFT_X_meta_long$Parameter <- factor(SFT_X_meta_long$Parameter, levels = parameter_order)
-
-# Calculate averages for each Block + Treatment combination within each Field
-averages <- SFT_X_meta_long %>%
-  group_by(Field, Treatment, Parameter) %>%
-  summarise(Mean = mean(Value),
-            SE = sd(Value) / sqrt(n())) %>%
-  ungroup()
-
-# Ensure averages Field and Parameter are factors with specified levels
-averages$Field <- factor(averages$Field, levels = field_order)
-averages$Parameter <- factor(averages$Parameter, levels = parameter_order)
-
-# Create a single boxplot for WHC and pH values with customized labels
-X_bxplt <- ggplot(SFT_X_meta_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
-  stat_summary(fun.data = "mean_se", geom = "pointrange", position = position_dodge(width = 0.8), show.legend = TRUE) +
-  geom_errorbar(data = averages, aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE), 
-                position = position_dodge(width = 0.8), width = 0.25) +
-  labs(y = "WHC (%), pH (1:1), CO2 Respiration (mg CO2 / 24 hrs)", x = "Years Since WOR") +
-  theme_gray() +
-  theme(
-    axis.title = element_text(face = "bold", size = 12),
-    axis.text = element_text(size = 12),
-    legend.title = element_text(face = "bold", size = 12),
-    legend.text = element_text(size = 12),
-    strip.text = element_text(size = 12),
-    legend.position = "bottom"
-  ) +
-  scale_fill_manual(values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"), labels = c("CN" = "Control", "WC" = "WOR")) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  facet_wrap(~ Parameter, scales = "free_y", ncol = 2, labeller = labeller(Parameter = c("WHC" = "Water Holding Capacity", "pH" = "Soil pH (1:1 DIW)", "X16O_Respiration_Rate" = "CO2 Respiration Rate1 (mg CO2 / 24 hrs)", "X18O_Respiration_Rate" = "CO2 Respiration Rate2 (mg CO2 / 24 hrs)")))
-
-# Print the combined plot
-print(X_bxplt)
-
-# To save
-png("SFT_X_bxplt.png", width=12, height=8, bg="white", res=600, units="in")
-print(X_bxplt)
+png("fractionation_bxplt_clean.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(fractionation_bxplt)
 dev.off()
 ```
 
 # Plots that need to be exported separatley
-OM_Content, pH, WHC, EOC, ExtN, X16O_Respiration (CO2 respiration with natural, 16O-water)
+EOC, ExtN
 
-# Soil Organic Matter Content
+# Extractable Organic Carbon
 ```{r}
 library(grid)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
 
-# Filter data and prepare long format
-OM_data <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, OM_Content)
-
-OM_long <- OM_data %>%
-  pivot_longer(cols = OM_Content, names_to = "Parameter", values_to = "Value")
-
-# Set factor levels for consistent x-axis ordering
-OM_long$Field <- factor(OM_long$Field, levels = c("K95", "K92", "K74", "K31"))
-
-# Add custom facet label for strip
-OM_long$Facet <- "<2 mm Soil"
-
-# Calculate summary statistics per Treatment × Field group
-OM_avg <- OM_long %>%
-  group_by(Field, Treatment) %>%
-  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
-
-# Create boxplot with mean ± SE
-OM_plot <- ggplot(OM_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(0.8), color = "black") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "pointrange",
-    aes(group = Treatment),
-    position = position_dodge(width = 0.8),
-    shape = 21,
-    fill = "black",
-    color = "black"
-  ) +
-  geom_errorbar(
-    data = OM_avg,
-    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
-    position = position_dodge(width = 0.8),
-    width = 0.25,
-    inherit.aes = FALSE
-  ) +
-  facet_wrap(~Facet, strip.position = "top") +
-  labs(
-    y = "Organic Matter Content (%)",
-    x = "Years Since WOR"
-  ) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  scale_fill_manual(
-    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
-    labels = c("CN" = "Control", "WC" = "WOR")
-  ) +
-theme_bw(base_size = 12) +  # ensures font size matches TN plot
-theme(
-  panel.background = element_rect(fill = "grey95", color = NA),
-  panel.grid.major = element_line(color = "white"),
-  panel.grid.minor = element_line(color = "white"),
-  strip.background = element_rect(fill = "grey80", color = NA),
-  strip.text = element_text(size = 12),
-  axis.title = element_text(face = "bold", size = 12),
-  axis.text = element_text(size = 12),
-  legend.title = element_text(face = "bold", size = 12),
-  legend.text = element_text(size = 12),
-  legend.position = "none",
-  axis.text.x = element_text(angle = 0, hjust = 0.5)
-)
-
-# Print
-print(OM_plot)
-
-# To save
-png("OM_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
-print(OM_plot)
-dev.off()
-```
-
-# Soil pH (1:1, Soil to DIW)
-```{r}
-# Filter data and prepare long format
-pH_data <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, pH)
-
-pH_long <- pH_data %>%
-  pivot_longer(cols = pH, names_to = "Parameter", values_to = "Value")
-
-# Set factor levels for consistent x-axis ordering
-pH_long$Field <- factor(pH_long$Field, levels = c("K95", "K92", "K74", "K31"))
-
-# Add custom facet label for strip
-pH_long$Facet <- "<2mm Soil"
-
-# Calculate summary statistics per Treatment × Field group
-pH_avg <- pH_long %>%
-  group_by(Field, Treatment) %>%
-  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
-
-# Create boxplot with mean ± SE
-pH_plot <- ggplot(pH_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(0.8), color = "black") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "pointrange",
-    aes(group = Treatment),
-    position = position_dodge(width = 0.8),
-    shape = 21,
-    fill = "black",
-    color = "black"
-  ) +
-  geom_errorbar(
-    data = pH_avg,
-    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
-    position = position_dodge(width = 0.8),
-    width = 0.25,
-    inherit.aes = FALSE
-  ) +
-  facet_wrap(~Facet, strip.position = "top") +
-  labs(
-    y = "pH (1:1 DIW)",
-    x = "Years Since WOR"
-  ) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  scale_fill_manual(
-    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
-    labels = c("CN" = "Control", "WC" = "WOR")
-  ) +
-theme_bw(base_size = 12) +  # ensures font size matches TN plot
-theme(
-  panel.background = element_rect(fill = "grey95", color = NA),
-  panel.grid.major = element_line(color = "white"),
-  panel.grid.minor = element_line(color = "white"),
-  strip.background = element_rect(fill = "grey80", color = NA),
-  strip.text = element_text(size = 12),
-  axis.title = element_text(face = "bold", size = 12),
-  axis.text = element_text(size = 12),
-  legend.title = element_text(face = "bold", size = 12),
-  legend.text = element_text(size = 12),
-  legend.position = "none",
-  axis.text.x = element_text(angle = 0, hjust = 0.5)
-)
-
-# Print
-print(pH_plot)
-
-# To save
-png("pH_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
-print(pH_plot)
-dev.off()
-```
-
-# Water Holding Capacity
-```{r}
-# Filter data and prepare long format
-WHC_data <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, WHC)
-
-WHC_long <- WHC_data %>%
-  pivot_longer(cols = WHC, names_to = "Parameter", values_to = "Value")
-
-# Set factor levels for consistent x-axis ordering
-WHC_long$Field <- factor(WHC_long$Field, levels = c("K95", "K92", "K74", "K31"))
-
-# Add custom facet label for strip
-WHC_long$Facet <- "<2mm Soil"
-
-# Calculate summary statistics per Treatment × Field group
-WHC_avg <- WHC_long %>%
-  group_by(Field, Treatment) %>%
-  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
-
-# Create boxplot with mean ± SE
-WHC_plot <- ggplot(WHC_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(0.8), color = "black") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "pointrange",
-    aes(group = Treatment),
-    position = position_dodge(width = 0.8),
-    shape = 21,
-    fill = "black",
-    color = "black"
-  ) +
-  geom_errorbar(
-    data = WHC_avg,
-    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
-    position = position_dodge(width = 0.8),
-    width = 0.25,
-    inherit.aes = FALSE
-  ) +
-  facet_wrap(~Facet, strip.position = "top") +
-  labs(
-    y = "Water Holding Capacity (%)",
-    x = "Years Since WOR"
-  ) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  scale_fill_manual(
-    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
-    labels = c("CN" = "Control", "WC" = "WOR")
-  ) +
-theme_bw(base_size = 12) +  # ensures font size matches TN plot
-theme(
-  panel.background = element_rect(fill = "grey95", color = NA),
-  panel.grid.major = element_line(color = "white"),
-  panel.grid.minor = element_line(color = "white"),
-  strip.background = element_rect(fill = "grey80", color = NA),
-  strip.text = element_text(size = 12),
-  axis.title = element_text(face = "bold", size = 12),
-  axis.text = element_text(size = 12),
-  legend.title = element_text(face = "bold", size = 12),
-  legend.text = element_text(size = 12),
-  legend.position = "none",
-  axis.text.x = element_text(angle = 0, hjust = 0.5)
-)
-
-# Print
-print(WHC_plot)
-
-# To save
-png("WHC_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
-print(WHC_plot)
-dev.off()
-```
-
-# Extractable Organic Carbon
-```{r}
 # Filter data and prepare long format
 EOC_data <- SFT_meta %>%
   select(Sample, Field, Block, Treatment, EOC)
@@ -1660,7 +1302,7 @@ print(EOC_plot)
 dev.off()
 ```
 
-# Extractable Organic Nitrogen
+# Extractable Nitrogen
 ```{r}
 # Filter data and prepare long format
 ExtN_data <- SFT_meta %>%
@@ -1795,80 +1437,7 @@ print(ExtN_plot)
 dev.off()
 ```
 
-# (16O-water) CO2 Respiration Rate
-```{r}
-# Filter data and prepare long format
-X16O_Respiration_Rate_data <- SFT_meta %>%
-  select(Sample, Field, Block, Treatment, X16O_Respiration_Rate)
-
-X16O_Respiration_Rate_long <- X16O_Respiration_Rate_data %>%
-  pivot_longer(cols = X16O_Respiration_Rate, names_to = "Parameter", values_to = "Value")
-
-# Set factor levels for consistent x-axis ordering
-X16O_Respiration_Rate_long$Field <- factor(X16O_Respiration_Rate_long$Field, levels = c("K95", "K92", "K74", "K31"))
-
-# Add custom facet label for strip
-X16O_Respiration_Rate_long$Facet <- "<2mm Soil"
-
-# Calculate summary statistics per Treatment × Field group
-X16O_Respiration_Rate_avg <- X16O_Respiration_Rate_long %>%
-  group_by(Field, Treatment) %>%
-  summarise(Mean = mean(Value), SE = sd(Value) / sqrt(n()), .groups = "drop")
-
-# Create boxplot with mean ± SE
-X16O_Respiration_Rate_plot <- ggplot(X16O_Respiration_Rate_long, aes(x = Field, y = Value, fill = Treatment)) +
-  geom_boxplot(position = position_dodge(0.8), color = "black") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "pointrange",
-    aes(group = Treatment),
-    position = position_dodge(width = 0.8),
-    shape = 21,
-    fill = "black",
-    color = "black"
-  ) +
-  geom_errorbar(
-    data = X16O_Respiration_Rate_avg,
-    aes(x = Field, y = Mean, ymin = Mean - SE, ymax = Mean + SE, group = Treatment, fill = Treatment),
-    position = position_dodge(width = 0.8),
-    width = 0.25,
-    inherit.aes = FALSE
-  ) +
-  facet_wrap(~Facet, strip.position = "top") +
-  labs(
-    y = "CO2 Respiration Rate (mg CO2 / 24 hrs)",
-    x = "Years Since WOR"
-  ) +
-  scale_x_discrete(labels = c("K95" = "3", "K92" = "4", "K74" = "6", "K31" = "15")) +
-  scale_fill_manual(
-    values = c("CN" = "#1F77B4", "WC" = "#FF7F0E"),
-    labels = c("CN" = "Control", "WC" = "WOR")
-  ) +
-theme_bw(base_size = 12) +  # ensures font size matches TN plot
-theme(
-  panel.background = element_rect(fill = "grey95", color = NA),
-  panel.grid.major = element_line(color = "white"),
-  panel.grid.minor = element_line(color = "white"),
-  strip.background = element_rect(fill = "grey80", color = NA),
-  strip.text = element_text(size = 12),
-  axis.title = element_text(face = "bold", size = 12),
-  axis.text = element_text(size = 12),
-  legend.title = element_text(face = "bold", size = 12),
-  legend.text = element_text(size = 12),
-  legend.position = "none",
-  axis.text.x = element_text(angle = 0, hjust = 0.5)
-)
-
-# Print
-print(X16O_Respiration_Rate_plot)
-
-# To save
-png("X16O_Respiration_Rate_plot_facetstyle_thin_nl.png", width = 4, height = 6, units = "in", res = 600, bg = "white")
-print(X16O_Respiration_Rate_plot)
-dev.off()
-```
-
-## Plotting Helix Index 1 (Decomposition) and 2 (Recalcitrance)
+## Plotting Helix Index 1 (Aliphatic : Aromatic) and 2 (Aromatic : Carboxylic)
 Indices were calculated in accordance with the wavenumber corresponding to the 13 organic bands described in Margenot et al 2015: https://acsess.onlinelibrary.wiley.com/doi/10.2136/sssaj2015.02.0070
 
 # These indices were revised for Wood (aromatic hydrocarbon) Amendment
@@ -1886,8 +1455,8 @@ library(dplyr)
 library(ggsignif)
 
 # Select the columns you want to include
-Index_columns <- c("POM_Decomposition_Index", "MAOM_Decomposition_Index",
-                   "POM_Recalcitrance_Index", "MAOM_Recalcitrance_Index")
+Index_columns <- c("POM_Aliphatic_Aromatic", "MAOM_Aliphatic_Aromatic",
+                   "POM_Aromatic_Carboxylic", "MAOM_Aromatic_Carboxylic")
 
 # Gather the data to reshape it and filter columns
 SFT_Imeta_long <- SFT_meta %>%
@@ -1906,7 +1475,7 @@ remove_outliers <- function(x) {
 # Apply outlier removal only to POM indices
 SFT_Imeta_long <- SFT_Imeta_long %>%
   group_by(Parameter) %>%
-  mutate(Value = ifelse(Parameter %in% c("POM_Decomposition_Index", "POM_Recalcitrance_Index"),
+  mutate(Value = ifelse(Parameter %in% c("POM_Aliphatic_Aromatic", "POM_Aromatic_Carboxylic"),
                         remove_outliers(Value), Value)) %>%
   ungroup()
 
@@ -1919,10 +1488,10 @@ averages <- SFT_Imeta_long %>%
 # Define custom order for Field and Parameter
 field_order <- c("K95", "K92", "K74", "K31")
 parameter_order <- c(
-  "POM_Decomposition_Index",
-  "MAOM_Decomposition_Index",
-  "POM_Recalcitrance_Index",
-  "MAOM_Recalcitrance_Index"
+  "POM_Aliphatic_Aromatic",
+  "MAOM_Aliphatic_Aromatic",
+  "POM_Aromatic_Carboxylic",
+  "MAOM_Aromatic_Carboxylic"
 )
 
 # Apply factor levels (ordering) to Parameter and Field
@@ -1938,7 +1507,7 @@ averages <- averages %>%
   )
 
 # Create the plot
-Decomp_Recal_bxplt <- ggplot(SFT_Imeta_long, aes(x = Field, y = Value, fill = Treatment)) +
+Index_bxplt <- ggplot(SFT_Imeta_long, aes(x = Field, y = Value, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), show.legend = TRUE) +
   stat_summary(fun.data = "mean_se", geom = "pointrange",
                position = position_dodge(width = 0.8), show.legend = TRUE) +
@@ -1961,19 +1530,19 @@ Decomp_Recal_bxplt <- ggplot(SFT_Imeta_long, aes(x = Field, y = Value, fill = Tr
                               "K74" = "6", "K31" = "15")) +
   facet_wrap(~ Parameter, scales = "free_y", labeller = labeller(
     Parameter = c(
-      "POM_Decomposition_Index"  = "POM Aliphatic C : Aromatic C",
-      "MAOM_Decomposition_Index" = "MAOM Aliphatic C : Aromatic C",
-      "POM_Recalcitrance_Index"  = "POM Aromatic C : Carboxylic C",
-      "MAOM_Recalcitrance_Index" = "MAOM Aromatic C : Carboxylic C"
+      "POM_Aliphatic_Aromatic"  = "POM Aliphatic C : Aromatic C",
+      "MAOM_Aliphatic_Aromatic" = "MAOM Aliphatic C : Aromatic C",
+      "POM_Aromatic_Carboxylic"  = "POM Aromatic C : Carboxylic C",
+      "MAOM_Aromatic_Carboxylic" = "MAOM Aromatic C : Carboxylic C"
     )
   ))
 
 # Print the plot
-print(Decomp_Recal_bxplt)
+print(Index_bxplt)
 
 # Save the plot
-png("SFT_decomp_recal_bxplt2.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
-print(Decomp_Recal_bxplt)
+png("SFT_Index_bxplt.png", width = 12, height = 6, bg = "white", res = 600, units = "in")
+print(Index_bxplt)
 dev.off()
 ```
 
